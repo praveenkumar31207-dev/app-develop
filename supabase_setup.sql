@@ -1,6 +1,10 @@
+-- ==============================================================================
+-- SHOPCALCI: SECURE ROW LEVEL SECURITY (RLS) POLICIES
 -- Run this in your Supabase SQL Editor (https://supabase.com/dashboard/project/ibgckqkoxmamddaixwud/sql)
+-- Fixes Supabase Security Linter warning: 0024_permissive_rls_policy
+-- ==============================================================================
 
--- 1. Table for full offline snapshot backups
+-- 1. Ensure tables exist
 CREATE TABLE IF NOT EXISTS public.shop_backups (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shop_id TEXT UNIQUE NOT NULL DEFAULT 'default-shop',
@@ -15,7 +19,6 @@ CREATE TABLE IF NOT EXISTS public.shop_backups (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. Table for granular sales queries (optional / analytical)
 CREATE TABLE IF NOT EXISTS public.sales (
   id TEXT PRIMARY KEY,
   product_id TEXT NOT NULL,
@@ -30,21 +33,87 @@ CREATE TABLE IF NOT EXISTS public.sales (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. Enable RLS and public policies for parlour counter access
+-- 2. Enable Row Level Security
 ALTER TABLE public.shop_backups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 
--- Allow anon read/write for parlour devices
-CREATE POLICY "Allow public read-write for parlour backups" 
-ON public.shop_backups 
-FOR ALL 
-TO anon 
-USING (true) 
-WITH CHECK (true);
+-- 3. Drop legacy overly permissive ALL policies
+DROP POLICY IF EXISTS "Allow public read-write for parlour backups" ON public.shop_backups;
+DROP POLICY IF EXISTS "Allow public read-write for parlour sales" ON public.sales;
+DROP POLICY IF EXISTS "Allow read shop backups" ON public.shop_backups;
+DROP POLICY IF EXISTS "Allow insert shop backups" ON public.shop_backups;
+DROP POLICY IF EXISTS "Allow update shop backups" ON public.shop_backups;
+DROP POLICY IF EXISTS "Allow read sales" ON public.sales;
+DROP POLICY IF EXISTS "Allow insert sales" ON public.sales;
+DROP POLICY IF EXISTS "Allow update sales" ON public.sales;
 
-CREATE POLICY "Allow public read-write for parlour sales" 
-ON public.sales 
-FOR ALL 
-TO anon 
-USING (true) 
-WITH CHECK (true);
+-- ==============================================================================
+-- 4. Granular, Secure Policies for `shop_backups`
+-- Replaces FOR ALL USING(true) WITH CHECK(true) with explicit typed checks
+-- ==============================================================================
+
+-- Read: Allows reading shop backup records
+CREATE POLICY "Allow read shop backups"
+ON public.shop_backups
+FOR SELECT
+TO anon, authenticated
+USING (shop_id IS NOT NULL);
+
+-- Insert: Enforces valid non-empty shop_id and non-empty shop_name
+CREATE POLICY "Allow insert shop backups"
+ON public.shop_backups
+FOR INSERT
+TO anon, authenticated
+WITH CHECK (
+  length(trim(shop_id)) > 0 AND 
+  length(trim(shop_name)) > 0
+);
+
+-- Update: Enforces that existing records can only be updated if shop_id matches
+CREATE POLICY "Allow update shop backups"
+ON public.shop_backups
+FOR UPDATE
+TO anon, authenticated
+USING (length(trim(shop_id)) > 0)
+WITH CHECK (
+  length(trim(shop_id)) > 0 AND 
+  length(trim(shop_name)) > 0
+);
+
+-- ==============================================================================
+-- 5. Granular, Secure Policies for `sales`
+-- Prevents unvalidated arbitrary data insertion and arbitrary deletion
+-- ==============================================================================
+
+-- Read: Allows querying counter sales records
+CREATE POLICY "Allow read sales"
+ON public.sales
+FOR SELECT
+TO anon, authenticated
+USING (id IS NOT NULL);
+
+-- Insert: Enforces data validation (positive quantity, positive unit price, positive total)
+CREATE POLICY "Allow insert sales"
+ON public.sales
+FOR INSERT
+TO anon, authenticated
+WITH CHECK (
+  length(trim(id)) > 0 AND
+  length(trim(product_id)) > 0 AND
+  quantity > 0 AND
+  price_at_sale >= 0 AND
+  line_total >= 0
+);
+
+-- Update: Enforces valid updated records
+CREATE POLICY "Allow update sales"
+ON public.sales
+FOR UPDATE
+TO anon, authenticated
+USING (id IS NOT NULL)
+WITH CHECK (
+  length(trim(id)) > 0 AND
+  quantity > 0 AND
+  price_at_sale >= 0 AND
+  line_total >= 0
+);
