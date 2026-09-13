@@ -10,7 +10,9 @@ import {
   IndianRupee,
   ToggleLeft,
   ToggleRight,
-  Sparkles
+  Sparkles,
+  Boxes,
+  Truck
 } from 'lucide-react';
 
 interface ProductManagerViewProps {
@@ -35,10 +37,14 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
   const [newCategory, setNewCategory] = useState<Product['category']>('Milk');
   const [newUnit, setNewUnit] = useState('500ml pouch');
   const [newPrice, setNewPrice] = useState<number>(25);
+  const [newWholesalePrice, setNewWholesalePrice] = useState<number>(22);
+  const [newCrateSize, setNewCrateSize] = useState<number>(20);
 
   // Form states for edit product
   const [editName, setEditName] = useState('');
   const [editPrice, setEditPrice] = useState<number>(0);
+  const [editWholesalePrice, setEditWholesalePrice] = useState<number>(0);
+  const [editCrateSize, setEditCrateSize] = useState<number>(20);
   const [editUnit, setEditUnit] = useState('');
   const [editCategory, setEditCategory] = useState<Product['category']>('Milk');
 
@@ -46,6 +52,8 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
     setEditingId(p.id);
     setEditName(p.name);
     setEditPrice(p.price);
+    setEditWholesalePrice(p.wholesalePrice || Math.round(p.price * 0.9 * 10) / 10);
+    setEditCrateSize(p.wholesaleCrateSize || 20);
     setEditUnit(p.unit);
     setEditCategory(p.category);
   };
@@ -55,6 +63,8 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
     onUpdateProduct(id, {
       name: editName.trim(),
       price: Number(editPrice),
+      wholesalePrice: Number(editWholesalePrice) || Number(editPrice),
+      wholesaleCrateSize: Number(editCrateSize) || 20,
       unit: editUnit.trim(),
       category: editCategory,
     });
@@ -71,6 +81,8 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
       category: newCategory,
       unit: newUnit.trim(),
       price: Number(newPrice),
+      wholesalePrice: Number(newWholesalePrice) || Number(newPrice),
+      wholesaleCrateSize: Number(newCrateSize) || 20,
       isActive: true,
       sortOrder: products.length + 1,
     });
@@ -78,34 +90,35 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
     setNewName('');
     setNewTamilName('');
     setNewPrice(25);
+    setNewWholesalePrice(22);
+    setNewCrateSize(20);
     setIsAdding(false);
   };
 
   return (
-    <div className="space-y-5 pb-20 md:pb-8 max-w-5xl mx-auto">
+    <div className="space-y-4 sm:space-y-5 pb-24 md:pb-8 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-sky-700 bg-sky-100/70 px-2 py-0.5 rounded-full">
+          <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-sky-700 bg-sky-100/70 px-2 py-0.5 rounded-full">
             Admin Catalogue
           </span>
-          <h2 className="text-2xl font-extrabold text-slate-900 mt-1">
-            Product & Price Management
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">
+            Retail & Wholesale Rates
           </h2>
-          <p className="text-sm text-slate-500">
-            Set fixed retail prices (₹), add new parlour items, or toggle active status.
+          <p className="text-xs sm:text-sm text-slate-500">
+            Configure retail prices (₹), bulk wholesale rates, crate units, or toggle active status.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
-              if (confirm('Reset catalogue to Chennai dairy default products? Any custom items will be reset.')) {
+              if (confirm('Reset catalogue to Chennai dairy default products with wholesale rates?')) {
                 onResetToDefault();
               }
             }}
-            className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold inline-flex items-center gap-1.5"
-            title="Reload default catalog"
+            className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold inline-flex items-center gap-1.5"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset Defaults</span>
@@ -113,30 +126,22 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
 
           <button
             onClick={() => setIsAdding(true)}
-            className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-md shadow-sky-600/20 inline-flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-md shadow-sky-600/20 inline-flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
-            <span>Add New Item</span>
+            <span>Add Item</span>
           </button>
         </div>
       </div>
 
-      {/* Note on Price History Integrity */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-900 flex items-start gap-2.5">
-        <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-        <p>
-          <strong>Price Revision Protection:</strong> When you change a product price here, all <em>previously recorded sales</em> stay locked at their original recorded prices. Only new counter entries will use the updated price.
-        </p>
-      </div>
-
-      {/* Add Product Form Modal / Section */}
+      {/* Add Product Form Modal */}
       {isAdding && (
         <form
           onSubmit={handleCreateProduct}
-          className="bg-white p-5 rounded-2xl border-2 border-sky-300 shadow-md space-y-4 animate-in fade-in"
+          className="bg-white p-4 sm:p-5 rounded-2xl border-2 border-sky-300 shadow-md space-y-3.5 animate-in fade-in"
         >
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <h3 className="font-bold text-slate-900 text-base">Add New Dairy Product</h3>
+            <h3 className="font-bold text-slate-900 text-sm sm:text-base">Add New Dairy Product</h3>
             <button
               type="button"
               onClick={() => setIsAdding(false)}
@@ -146,7 +151,7 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 Product Name (English) *
@@ -156,8 +161,8 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
                 required
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. Buffalo Milk / Strawberry Milk"
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"
+                placeholder="e.g. Toned Milk / Curd"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
 
@@ -169,8 +174,8 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
                 type="text"
                 value={newTamilName}
                 onChange={(e) => setNewTamilName(e.target.value)}
-                placeholder="e.g. எருமைப்பால்"
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                placeholder="e.g. டோன்ட் பால்"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
 
@@ -179,7 +184,7 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
               <select
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value as any)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
                 <option value="Milk">Milk</option>
                 <option value="Curd & Dairy">Curd & Dairy</option>
@@ -197,27 +202,54 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
                 required
                 value={newUnit}
                 onChange={(e) => setNewUnit(e.target.value)}
-                placeholder="e.g. 500ml pouch, 200g cup, 1L jar"
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                placeholder="e.g. 500ml pouch, 1L jar"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Retail Selling Price (₹ INR) *
+              <label className="block text-xs font-semibold text-emerald-800 mb-1">
+                Retail Selling Price (₹) *
               </label>
-              <div className="relative">
-                <IndianRupee className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="number"
-                  required
-                  min={1}
-                  step={0.5}
-                  value={newPrice}
-                  onChange={(e) => setNewPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-bold text-slate-900"
-                />
-              </div>
+              <input
+                type="number"
+                required
+                min={1}
+                step={0.5}
+                value={newPrice}
+                onChange={(e) => setNewPrice(parseFloat(e.target.value) || 0)}
+                className="w-full px-3 py-2 rounded-xl bg-emerald-50/50 border border-emerald-300 text-xs sm:text-sm font-bold text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-amber-800 mb-1 flex items-center gap-1">
+                <Truck className="w-3.5 h-3.5" />
+                Wholesale Bulk Price (₹)
+              </label>
+              <input
+                type="number"
+                min={1}
+                step={0.5}
+                value={newWholesalePrice}
+                onChange={(e) => setNewWholesalePrice(parseFloat(e.target.value) || 0)}
+                className="w-full px-3 py-2 rounded-xl bg-amber-50/50 border border-amber-300 text-xs sm:text-sm font-bold text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1 flex items-center gap-1">
+                <Boxes className="w-3.5 h-3.5 text-slate-400" />
+                Units per Crate
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={newCrateSize}
+                onChange={(e) => setNewCrateSize(parseInt(e.target.value, 10) || 20)}
+                placeholder="20"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
             </div>
           </div>
 
@@ -225,13 +257,13 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
             <button
               type="button"
               onClick={() => setIsAdding(false)}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold"
+              className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20"
+              className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20"
             >
               Save Product
             </button>
@@ -239,50 +271,63 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
         </form>
       )}
 
-      {/* Product List Table / Grid */}
+      {/* Product List Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
-        <div className="bg-slate-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+        <div className="bg-slate-50 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
           <span>Product & Unit</span>
-          <div className="flex items-center gap-8 pr-2">
-            <span>Price</span>
+          <div className="flex items-center gap-5 sm:gap-8 pr-1">
+            <span>Retail Rate</span>
+            <span>Wholesale</span>
             <span>Status</span>
-            <span>Action</span>
+            <span>Edit</span>
           </div>
         </div>
 
         {products.map((p) => {
           const isEdit = editingId === p.id;
+          const wsPrice = p.wholesalePrice || Math.round(p.price * 0.9 * 10) / 10;
+          const crateSize = p.wholesaleCrateSize || 20;
 
           if (isEdit) {
             return (
-              <div key={p.id} className="p-4 bg-sky-50/50 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div key={p.id} className="p-3.5 bg-sky-50/50 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-500 block mb-1">Item Name</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-1">Item Name</label>
                     <input
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-sm font-semibold"
+                      className="w-full px-2 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-500 block mb-1">Unit</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-1">Unit</label>
                     <input
                       type="text"
                       value={editUnit}
                       onChange={(e) => setEditUnit(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-sm"
+                      className="w-full px-2 py-1.5 rounded-lg bg-white border border-slate-300 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-500 block mb-1">Price (₹)</label>
+                    <label className="text-[10px] font-semibold text-emerald-700 block mb-1">Retail (₹)</label>
                     <input
                       type="number"
                       step={0.5}
                       value={editPrice}
                       onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-sm font-bold text-emerald-700"
+                      className="w-full px-2 py-1.5 rounded-lg bg-white border border-emerald-300 text-xs font-bold text-emerald-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-amber-700 block mb-1">Wholesale (₹)</label>
+                    <input
+                      type="number"
+                      step={0.5}
+                      value={editWholesalePrice}
+                      onChange={(e) => setEditWholesalePrice(parseFloat(e.target.value) || 0)}
+                      className="w-full px-2 py-1.5 rounded-lg bg-white border border-amber-300 text-xs font-bold text-amber-800"
                     />
                   </div>
                 </div>
@@ -296,7 +341,7 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
                   </button>
                   <button
                     onClick={() => handleSaveEdit(p.id)}
-                    className="px-3.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1"
+                    className="px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1"
                   >
                     <Check className="w-3.5 h-3.5" /> Save Changes
                   </button>
@@ -308,32 +353,42 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
           return (
             <div
               key={p.id}
-              className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors ${
+              className={`p-3 sm:p-4 flex items-center justify-between gap-2.5 hover:bg-slate-50 transition-colors ${
                 !p.isActive ? 'opacity-50 bg-slate-50/50' : ''
               }`}
             >
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900 text-sm sm:text-base truncate">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-bold text-slate-900 text-xs sm:text-base leading-tight truncate">
                     {p.name}
                   </span>
                   {p.tamilName && (
-                    <span className="text-xs text-slate-400">
+                    <span className="text-[10px] sm:text-xs text-slate-400">
                       ({p.tamilName})
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {p.unit} • <span className="text-sky-700 font-medium">{p.category}</span>
+                <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2">
+                  <span>{p.unit}</span>
+                  <span>•</span>
+                  <span className="text-amber-700 font-medium">{crateSize}/crate</span>
                 </p>
               </div>
 
-              <div className="flex items-center gap-4 sm:gap-6 shrink-0">
-                {/* Price Display */}
+              <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+                {/* Retail Price */}
                 <div className="text-right">
-                  <span className="text-base sm:text-lg font-black text-slate-900 flex items-center justify-end">
-                    <IndianRupee className="w-3.5 h-3.5 inline mr-0.5" />
+                  <span className="text-xs sm:text-sm font-black text-slate-900 flex items-center justify-end">
+                    <IndianRupee className="w-3 h-3 inline mr-0.5" />
                     {p.price}
+                  </span>
+                </div>
+
+                {/* Wholesale Price */}
+                <div className="text-right">
+                  <span className="text-xs sm:text-sm font-black text-amber-800 flex items-center justify-end">
+                    <IndianRupee className="w-3 h-3 inline mr-0.5" />
+                    {wsPrice}
                   </span>
                 </div>
 
@@ -341,14 +396,13 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
                 <button
                   onClick={() => onUpdateProduct(p.id, { isActive: !p.isActive })}
                   className="p-1 text-slate-500 hover:text-slate-800"
-                  title={p.isActive ? 'Click to deactivate' : 'Click to activate'}
                 >
                   {p.isActive ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                       Active
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
                       Hidden
                     </span>
                   )}
@@ -357,10 +411,10 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
                 {/* Edit Button */}
                 <button
                   onClick={() => startEdit(p)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-sky-50"
-                  title="Edit product or price"
+                  className="p-1 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-sky-50"
+                  title="Edit product"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <Edit2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>

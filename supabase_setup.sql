@@ -2,6 +2,7 @@
 -- SHOPCALCI: SECURE ROW LEVEL SECURITY (RLS) POLICIES
 -- Run this in your Supabase SQL Editor (https://supabase.com/dashboard/project/ibgckqkoxmamddaixwud/sql)
 -- Fixes Supabase Security Linter warning: 0024_permissive_rls_policy
+-- Includes Retail & Wholesale counters
 -- ==============================================================================
 
 -- 1. Ensure tables exist
@@ -27,11 +28,24 @@ CREATE TABLE IF NOT EXISTS public.sales (
   quantity NUMERIC NOT NULL,
   price_at_sale NUMERIC NOT NULL,
   line_total NUMERIC NOT NULL,
+  sale_type TEXT DEFAULT 'retail', -- 'retail' or 'wholesale'
+  buyer_name TEXT,                 -- party/shop name for wholesale supply
   sale_timestamp TIMESTAMPTZ NOT NULL,
   date_str TEXT NOT NULL,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- If table already existed, add columns safely
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='sale_type') THEN
+    ALTER TABLE public.sales ADD COLUMN sale_type TEXT DEFAULT 'retail';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='buyer_name') THEN
+    ALTER TABLE public.sales ADD COLUMN buyer_name TEXT;
+  END IF;
+END $$;
 
 -- 2. Enable Row Level Security
 ALTER TABLE public.shop_backups ENABLE ROW LEVEL SECURITY;
@@ -49,17 +63,14 @@ DROP POLICY IF EXISTS "Allow update sales" ON public.sales;
 
 -- ==============================================================================
 -- 4. Granular, Secure Policies for `shop_backups`
--- Replaces FOR ALL USING(true) WITH CHECK(true) with explicit typed checks
 -- ==============================================================================
 
--- Read: Allows reading shop backup records
 CREATE POLICY "Allow read shop backups"
 ON public.shop_backups
 FOR SELECT
 TO anon, authenticated
 USING (shop_id IS NOT NULL);
 
--- Insert: Enforces valid non-empty shop_id and non-empty shop_name
 CREATE POLICY "Allow insert shop backups"
 ON public.shop_backups
 FOR INSERT
@@ -69,7 +80,6 @@ WITH CHECK (
   length(trim(shop_name)) > 0
 );
 
--- Update: Enforces that existing records can only be updated if shop_id matches
 CREATE POLICY "Allow update shop backups"
 ON public.shop_backups
 FOR UPDATE
@@ -82,17 +92,14 @@ WITH CHECK (
 
 -- ==============================================================================
 -- 5. Granular, Secure Policies for `sales`
--- Prevents unvalidated arbitrary data insertion and arbitrary deletion
 -- ==============================================================================
 
--- Read: Allows querying counter sales records
 CREATE POLICY "Allow read sales"
 ON public.sales
 FOR SELECT
 TO anon, authenticated
 USING (id IS NOT NULL);
 
--- Insert: Enforces data validation (positive quantity, positive unit price, positive total)
 CREATE POLICY "Allow insert sales"
 ON public.sales
 FOR INSERT
@@ -105,7 +112,6 @@ WITH CHECK (
   line_total >= 0
 );
 
--- Update: Enforces valid updated records
 CREATE POLICY "Allow update sales"
 ON public.sales
 FOR UPDATE

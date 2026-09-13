@@ -5,13 +5,14 @@ import { TabType, DesktopSidebar, MobileBottomNav } from '@/components/Navigatio
 import { CounterHeader } from '@/components/CounterHeader';
 import { TodaySalesView } from '@/components/TodaySalesView';
 import { AddSaleView } from '@/components/AddSaleView';
+import { WholesaleSaleView } from '@/components/WholesaleSaleView';
 import { DailyChartView } from '@/components/DailyChartView';
 import { MonthlyChartView } from '@/components/MonthlyChartView';
 import { ProductManagerView } from '@/components/ProductManagerView';
 import { BackupSettingsView } from '@/components/BackupSettingsView';
 import { storage } from '@/lib/storage';
 import { syncEngine } from '@/lib/sync';
-import { Product, SaleEntry, DailySummary, MonthlySummary, ShopProfile } from '@/lib/types';
+import { Product, SaleEntry, DailySummary, MonthlySummary, ShopProfile, SaleType } from '@/lib/types';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>('today');
@@ -29,7 +30,11 @@ export default function Home() {
   const [todaySummary, setTodaySummary] = useState<DailySummary>({
     dateStr: '',
     totalRevenue: 0,
+    retailRevenue: 0,
+    wholesaleRevenue: 0,
     totalUnits: 0,
+    retailUnits: 0,
+    wholesaleUnits: 0,
     totalTransactions: 0,
     productBreakdown: [],
   });
@@ -104,17 +109,19 @@ export default function Home() {
     };
   }, [reloadData, triggerCloudBackup]);
 
-  // Handler: Record sale (Local first + trigger async cloud sync)
+  // Handler: Record sale (Supports both retail and wholesale)
   const handleRecordSale = (entry: {
     productId: string;
     productName: string;
     unit: string;
     quantity: number;
     priceAtSale: number;
+    saleType?: SaleType;
+    buyerName?: string;
+    notes?: string;
   }) => {
     storage.saveSale(entry);
     reloadData();
-    // Auto sync to Supabase when online
     if (navigator.onLine) {
       triggerCloudBackup();
     }
@@ -199,12 +206,21 @@ export default function Home() {
               recentSales={todaySales}
               profile={profile}
               onNavigateToAddSale={() => setActiveTab('add-sale')}
+              onNavigateToWholesale={() => setActiveTab('wholesale')}
               onDeleteSale={handleDeleteSale}
             />
           )}
 
           {activeTab === 'add-sale' && (
             <AddSaleView
+              products={products}
+              onRecordSale={handleRecordSale}
+              onNavigateToToday={() => setActiveTab('today')}
+            />
+          )}
+
+          {activeTab === 'wholesale' && (
+            <WholesaleSaleView
               products={products}
               onRecordSale={handleRecordSale}
               onNavigateToToday={() => setActiveTab('today')}

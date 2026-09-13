@@ -5,10 +5,11 @@ import {
   BarChart3, 
   TrendingUp, 
   Package, 
-  Settings2 
+  Settings2,
+  Truck
 } from 'lucide-react';
 
-export type TabType = 'today' | 'add-sale' | 'daily-graph' | 'monthly-graph' | 'products' | 'settings';
+export type TabType = 'today' | 'add-sale' | 'wholesale' | 'daily-graph' | 'monthly-graph' | 'products' | 'settings';
 
 interface NavigationProps {
   activeTab: TabType;
@@ -17,7 +18,8 @@ interface NavigationProps {
 
 const NAV_ITEMS: { id: TabType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'today', label: "Today", icon: CalendarDays },
-  { id: 'add-sale', label: 'Add Sale', icon: Calculator },
+  { id: 'add-sale', label: 'Retail Sale', icon: Calculator },
+  { id: 'wholesale', label: 'Wholesale', icon: Truck },
   { id: 'daily-graph', label: 'Daily Graph', icon: BarChart3 },
   { id: 'monthly-graph', label: 'Monthly Graph', icon: TrendingUp },
   { id: 'products', label: 'Products', icon: Package },
@@ -35,6 +37,7 @@ export const DesktopSidebar: React.FC<NavigationProps> = ({ activeTab, onTabChan
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           const isAddSale = item.id === 'add-sale';
+          const isWholesale = item.id === 'wholesale';
 
           return (
             <button
@@ -44,14 +47,25 @@ export const DesktopSidebar: React.FC<NavigationProps> = ({ activeTab, onTabChan
                 isActive
                   ? isAddSale
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-700/20'
+                    : isWholesale
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-700/20'
                     : 'bg-sky-600 text-white shadow-md shadow-sky-600/20'
                   : isAddSale
                   ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-semibold'
+                  : isWholesale
+                  ? 'text-amber-800 bg-amber-50 hover:bg-amber-100 font-semibold'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? 'text-white' : isAddSale ? 'text-emerald-600' : 'text-slate-500'}`} />
+              <Icon className={`w-5 h-5 ${
+                isActive ? 'text-white' : isAddSale ? 'text-emerald-600' : isWholesale ? 'text-amber-600' : 'text-slate-500'
+              }`} />
               <span>{item.label}</span>
+              {isWholesale && !isActive && (
+                <span className="ml-auto text-[10px] bg-amber-600 text-white px-1.5 py-0.5 rounded font-bold uppercase">
+                  Bulk
+                </span>
+              )}
               {isAddSale && !isActive && (
                 <span className="ml-auto text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold uppercase">
                   Counter
@@ -65,8 +79,8 @@ export const DesktopSidebar: React.FC<NavigationProps> = ({ activeTab, onTabChan
       <div className="mt-auto pt-4 border-t border-slate-100">
         <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/70 text-xs text-slate-500">
           <p className="font-semibold text-slate-700">Tirumala Franchise</p>
-          <p className="text-[11px] mt-0.5 text-slate-400">Offline Counter POS v1.0</p>
-          <p className="text-[10px] text-emerald-600 mt-1 font-medium">✓ Local storage active</p>
+          <p className="text-[11px] mt-0.5 text-slate-400">Retail & Wholesale POS</p>
+          <p className="text-[10px] text-emerald-600 mt-1 font-medium">✓ Dual counters active</p>
         </div>
       </div>
     </aside>
@@ -75,32 +89,55 @@ export const DesktopSidebar: React.FC<NavigationProps> = ({ activeTab, onTabChan
 
 export const MobileBottomNav: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-1.5 shadow-lg">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1 py-1.5 shadow-lg">
       <div className="flex items-center justify-around">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           const isAddSale = item.id === 'add-sale';
+          const isWholesale = item.id === 'wholesale';
 
           if (isAddSale) {
             return (
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className="relative -top-3 flex flex-col items-center group touch-active focus:outline-none"
+                className="relative -top-2.5 flex flex-col items-center group touch-active focus:outline-none"
               >
                 <div
-                  className={`w-13 h-13 rounded-full flex items-center justify-center shadow-lg transition-all ${
+                  className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all ${
                     isActive
                       ? 'bg-emerald-600 ring-4 ring-emerald-100 scale-105'
                       : 'bg-emerald-600 hover:bg-emerald-700'
                   }`}
-                  style={{ width: '3.25rem', height: '3.25rem' }}
                 >
-                  <Icon className="w-6 h-6 text-white" />
+                  <Icon className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-[11px] font-bold mt-1 text-emerald-700">
-                  Add Sale
+                <span className="text-[10px] font-bold mt-0.5 text-emerald-700">
+                  Retail
+                </span>
+              </button>
+            );
+          }
+
+          if (isWholesale) {
+            return (
+              <button
+                key={item.id}
+                onClick={() => onTabChange(item.id)}
+                className="relative -top-2.5 flex flex-col items-center group touch-active focus:outline-none"
+              >
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all ${
+                    isActive
+                      ? 'bg-amber-600 ring-4 ring-amber-100 scale-105'
+                      : 'bg-amber-600 hover:bg-amber-700'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-[10px] font-bold mt-0.5 text-amber-700">
+                  Wholesale
                 </span>
               </button>
             );
@@ -110,12 +147,12 @@ export const MobileBottomNav: React.FC<NavigationProps> = ({ activeTab, onTabCha
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`flex flex-col items-center py-1 px-2 rounded-lg transition-colors min-w-[52px] touch-active ${
+              className={`flex flex-col items-center py-1 px-1 rounded-lg transition-colors min-w-[44px] touch-active ${
                 isActive ? 'text-sky-700 font-semibold' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? 'text-sky-600' : 'text-slate-400'}`} />
-              <span className="text-[10px] mt-0.5 leading-tight truncate max-w-[56px]">
+              <Icon className={`w-4 h-4 ${isActive ? 'text-sky-600' : 'text-slate-400'}`} />
+              <span className="text-[9px] mt-0.5 leading-tight truncate max-w-[48px]">
                 {item.label}
               </span>
             </button>

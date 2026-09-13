@@ -1,4 +1,4 @@
-import { Product, SaleEntry, DailySummary, MonthlySummary, ShopProfile } from './types';
+import { Product, SaleEntry, DailySummary, MonthlySummary, ShopProfile, SaleType } from './types';
 import { INITIAL_PRODUCTS, DEFAULT_SHOP_PROFILE } from './seed';
 
 const PRODUCTS_KEY = 'shopcalci_products_v1';
@@ -87,7 +87,6 @@ export const storage = {
   },
 
   deleteProduct(id: string): boolean {
-    // Soft delete / deactivate is safer, but allow removing if unused
     const products = this.getProducts();
     const filtered = products.filter((p) => p.id !== id);
     return this.saveProducts(filtered);
@@ -109,6 +108,8 @@ export const storage = {
     unit: string;
     quantity: number;
     priceAtSale: number;
+    saleType?: SaleType;
+    buyerName?: string;
     notes?: string;
   }): SaleEntry {
     const sales = this.getSales();
@@ -121,6 +122,8 @@ export const storage = {
       quantity: entry.quantity,
       priceAtSale: entry.priceAtSale,
       lineTotal: Math.round(entry.quantity * entry.priceAtSale * 100) / 100,
+      saleType: entry.saleType || 'retail',
+      buyerName: entry.buyerName,
       timestamp: now.toISOString(),
       dateStr: getLocalDateString(now),
       notes: entry.notes,
@@ -149,19 +152,35 @@ export const storage = {
   getDailySummary(dateStr: string = getLocalDateString()): DailySummary {
     const sales = this.getSales().filter((s) => s.dateStr === dateStr);
     let totalRevenue = 0;
+    let retailRevenue = 0;
+    let wholesaleRevenue = 0;
     let totalUnits = 0;
+    let retailUnits = 0;
+    let wholesaleUnits = 0;
+
     const breakdownMap: Record<string, {
       productId: string;
       productName: string;
       unit: string;
       totalQuantity: number;
       totalRevenue: number;
+      retailQuantity: number;
+      wholesaleQuantity: number;
       price: number;
     }> = {};
 
     for (const s of sales) {
+      const type = s.saleType || 'retail';
       totalRevenue += s.lineTotal;
       totalUnits += s.quantity;
+
+      if (type === 'wholesale') {
+        wholesaleRevenue += s.lineTotal;
+        wholesaleUnits += s.quantity;
+      } else {
+        retailRevenue += s.lineTotal;
+        retailUnits += s.quantity;
+      }
 
       if (!breakdownMap[s.productId]) {
         breakdownMap[s.productId] = {
@@ -170,11 +189,18 @@ export const storage = {
           unit: s.unit,
           totalQuantity: 0,
           totalRevenue: 0,
+          retailQuantity: 0,
+          wholesaleQuantity: 0,
           price: s.priceAtSale,
         };
       }
       breakdownMap[s.productId].totalQuantity += s.quantity;
       breakdownMap[s.productId].totalRevenue += s.lineTotal;
+      if (type === 'wholesale') {
+        breakdownMap[s.productId].wholesaleQuantity += s.quantity;
+      } else {
+        breakdownMap[s.productId].retailQuantity += s.quantity;
+      }
     }
 
     const productBreakdown = Object.values(breakdownMap).sort(
@@ -184,7 +210,11 @@ export const storage = {
     return {
       dateStr,
       totalRevenue: Math.round(totalRevenue * 100) / 100,
+      retailRevenue: Math.round(retailRevenue * 100) / 100,
+      wholesaleRevenue: Math.round(wholesaleRevenue * 100) / 100,
       totalUnits,
+      retailUnits,
+      wholesaleUnits,
       totalTransactions: sales.length,
       productBreakdown,
     };
@@ -207,9 +237,19 @@ export const storage = {
   getMonthlySummary(monthStr: string = getLocalMonthString()): MonthlySummary {
     const sales = this.getSales().filter((s) => s.dateStr.startsWith(monthStr));
     let totalRevenue = 0;
+    let retailRevenue = 0;
+    let wholesaleRevenue = 0;
     let totalUnits = 0;
 
-    const dailyTotalsMap: Record<string, { dateStr: string; dayNum: number; totalRevenue: number; totalUnits: number }> = {};
+    const dailyTotalsMap: Record<string, {
+      dateStr: string;
+      dayNum: number;
+      totalRevenue: number;
+      retailRevenue: number;
+      wholesaleRevenue: number;
+      totalUnits: number;
+    }> = {};
+
     const breakdownMap: Record<string, {
       productId: string;
       productName: string;
@@ -219,8 +259,15 @@ export const storage = {
     }> = {};
 
     for (const s of sales) {
+      const type = s.saleType || 'retail';
       totalRevenue += s.lineTotal;
       totalUnits += s.quantity;
+
+      if (type === 'wholesale') {
+        wholesaleRevenue += s.lineTotal;
+      } else {
+        retailRevenue += s.lineTotal;
+      }
 
       // daily bucket
       if (!dailyTotalsMap[s.dateStr]) {
@@ -229,11 +276,18 @@ export const storage = {
           dateStr: s.dateStr,
           dayNum,
           totalRevenue: 0,
+          retailRevenue: 0,
+          wholesaleRevenue: 0,
           totalUnits: 0,
         };
       }
       dailyTotalsMap[s.dateStr].totalRevenue += s.lineTotal;
       dailyTotalsMap[s.dateStr].totalUnits += s.quantity;
+      if (type === 'wholesale') {
+        dailyTotalsMap[s.dateStr].wholesaleRevenue += s.lineTotal;
+      } else {
+        dailyTotalsMap[s.dateStr].retailRevenue += s.lineTotal;
+      }
 
       // product bucket
       if (!breakdownMap[s.productId]) {
@@ -255,6 +309,8 @@ export const storage = {
     return {
       monthStr,
       totalRevenue: Math.round(totalRevenue * 100) / 100,
+      retailRevenue: Math.round(retailRevenue * 100) / 100,
+      wholesaleRevenue: Math.round(wholesaleRevenue * 100) / 100,
       totalUnits,
       totalTransactions: sales.length,
       dailyTotals,
@@ -287,12 +343,14 @@ export const storage = {
   // EXPORT & IMPORT
   exportSalesToCSV(): string {
     const sales = this.getSales();
-    const headers = ['Sale ID', 'Date', 'Time', 'Product Name', 'Unit', 'Quantity Sold', 'Price (INR)', 'Line Total (INR)', 'Notes'];
+    const headers = ['Sale ID', 'Type', 'Buyer / Party', 'Date', 'Time', 'Product Name', 'Unit', 'Quantity Sold', 'Price (INR)', 'Line Total (INR)', 'Notes'];
     const rows = sales.map((s) => {
       const date = new Date(s.timestamp);
       const timeStr = date.toLocaleTimeString('en-IN', { hour12: true });
       return [
         `"${s.id}"`,
+        `"${(s.saleType || 'retail').toUpperCase()}"`,
+        `"${(s.buyerName || '').replace(/"/g, '""')}"`,
         `"${s.dateStr}"`,
         `"${timeStr}"`,
         `"${s.productName.replace(/"/g, '""')}"`,
@@ -309,7 +367,7 @@ export const storage = {
 
   exportFullBackupJSON(): string {
     const payload = {
-      version: '1.0',
+      version: '1.1',
       exportedAt: new Date().toISOString(),
       profile: this.getShopProfile(),
       products: this.getProducts(),
@@ -337,48 +395,77 @@ export const storage = {
     }
   },
 
-  // Sample data generator for demo / testing trend graphs
+  // Sample data generator for demo
   populateSampleDemoData(): void {
     const products = this.getProducts();
     if (products.length === 0) return;
 
     const sampleSales: SaleEntry[] = [];
     const today = new Date();
+    const wholesaleBuyers = ['Hotel Saravana Bhavan', 'Murugan Tea Stall', 'Annapoorna Mess', 'Sri Krishna Sweets', 'Sangeetha Bakery'];
 
-    // Generate 14 days of realistic dairy counter transactions
+    // Generate 14 days of realistic dairy counter transactions (both retail & wholesale)
     for (let dayOffset = 13; dayOffset >= 0; dayOffset--) {
       const targetDate = new Date(today);
       targetDate.setDate(today.getDate() - dayOffset);
       const dStr = getLocalDateString(targetDate);
 
-      // 8 - 18 sales per day
-      const txCount = Math.floor(Math.random() * 10) + 8;
-      for (let j = 0; j < txCount; j++) {
-        // Pick random product
+      // Retail sales (8 - 15 sales)
+      const retailCount = Math.floor(Math.random() * 8) + 8;
+      for (let j = 0; j < retailCount; j++) {
         const prod = products[Math.floor(Math.random() * products.length)];
-        // Higher probability for toned milk or curd
         const qty = prod.category === 'Milk' ? Math.floor(Math.random() * 4) + 1 : Math.floor(Math.random() * 2) + 1;
-        const hour = 6 + Math.floor(Math.random() * 14); // 6 AM to 8 PM
+        const hour = 6 + Math.floor(Math.random() * 14);
         const minute = Math.floor(Math.random() * 60);
 
         const txDate = new Date(targetDate);
         txDate.setHours(hour, minute, 0, 0);
 
         sampleSales.push({
-          id: `sample-${dStr}-${j}-${Math.random().toString(36).substring(2, 6)}`,
+          id: `sample-ret-${dStr}-${j}-${Math.random().toString(36).substring(2, 6)}`,
           productId: prod.id,
           productName: prod.name,
           unit: prod.unit,
           quantity: qty,
           priceAtSale: prod.price,
           lineTotal: Math.round(qty * prod.price * 100) / 100,
+          saleType: 'retail',
           timestamp: txDate.toISOString(),
           dateStr: dStr,
         });
       }
+
+      // Wholesale bulk sales (2 - 4 bulk crate orders per day)
+      const wholesaleCount = Math.floor(Math.random() * 3) + 2;
+      for (let k = 0; k < wholesaleCount; k++) {
+        const prod = products.filter(p => p.category === 'Milk' || p.category === 'Curd & Dairy' || p.category === 'Paneer & Sweets')[Math.floor(Math.random() * 5)] || products[0];
+        const crateSize = prod.wholesaleCrateSize || 20;
+        const crates = Math.floor(Math.random() * 4) + 1; // 1 to 4 crates
+        const qty = crates * crateSize;
+        const wholesalePrice = prod.wholesalePrice || (prod.price * 0.9);
+        const buyer = wholesaleBuyers[Math.floor(Math.random() * wholesaleBuyers.length)];
+        const hour = 5 + Math.floor(Math.random() * 4); // Early morning 5-9 AM wholesale rush
+
+        const txDate = new Date(targetDate);
+        txDate.setHours(hour, Math.floor(Math.random() * 60), 0, 0);
+
+        sampleSales.push({
+          id: `sample-ws-${dStr}-${k}-${Math.random().toString(36).substring(2, 6)}`,
+          productId: prod.id,
+          productName: prod.name,
+          unit: prod.unit,
+          quantity: qty,
+          priceAtSale: wholesalePrice,
+          lineTotal: Math.round(qty * wholesalePrice * 100) / 100,
+          saleType: 'wholesale',
+          buyerName: buyer,
+          timestamp: txDate.toISOString(),
+          dateStr: dStr,
+          notes: `${crates} crate(s) bulk order`,
+        });
+      }
     }
 
-    // Sort newest first
     sampleSales.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     safeSet(SALES_KEY, sampleSales);
   }

@@ -1,10 +1,14 @@
+export type SaleType = 'retail' | 'wholesale';
+
 export interface Product {
   id: string;
   name: string;
   tamilName?: string;
   category: 'Milk' | 'Curd & Dairy' | 'Beverages' | 'Ghee & Fats' | 'Paneer & Sweets' | 'Ice Cream';
   unit: string; // e.g. "500ml pouch", "450g pouch", "1L jar"
-  price: number; // ₹ INR
+  price: number; // ₹ Retail price
+  wholesalePrice?: number; // ₹ Wholesale/Bulk discounted price
+  wholesaleCrateSize?: number; // e.g. 20 packets/crate or 10 kg
   isActive: boolean;
   sortOrder: number;
   createdAt: string;
@@ -19,15 +23,21 @@ export interface SaleEntry {
   quantity: number;
   priceAtSale: number; // Snapshot of price at moment of sale
   lineTotal: number; // quantity * priceAtSale
-  timestamp: string; // Full ISO string (e.g. 2026-09-13T07:30:00.000Z)
-  dateStr: string; // 'YYYY-MM-DD' in local timezone for fast day aggregation
+  saleType: SaleType; // 'retail' or 'wholesale'
+  buyerName?: string; // e.g. "Hotel Saravana", "Tea Stall Murugan"
+  timestamp: string; // Full ISO string
+  dateStr: string; // 'YYYY-MM-DD'
   notes?: string;
 }
 
 export interface DailySummary {
   dateStr: string; // 'YYYY-MM-DD'
   totalRevenue: number;
+  retailRevenue: number;
+  wholesaleRevenue: number;
   totalUnits: number;
+  retailUnits: number;
+  wholesaleUnits: number;
   totalTransactions: number;
   productBreakdown: {
     productId: string;
@@ -35,6 +45,8 @@ export interface DailySummary {
     unit: string;
     totalQuantity: number;
     totalRevenue: number;
+    retailQuantity: number;
+    wholesaleQuantity: number;
     price: number;
   }[];
 }
@@ -42,12 +54,16 @@ export interface DailySummary {
 export interface MonthlySummary {
   monthStr: string; // 'YYYY-MM'
   totalRevenue: number;
+  retailRevenue: number;
+  wholesaleRevenue: number;
   totalUnits: number;
   totalTransactions: number;
   dailyTotals: {
     dateStr: string;
     dayNum: number;
     totalRevenue: number;
+    retailRevenue: number;
+    wholesaleRevenue: number;
     totalUnits: number;
   }[];
   productBreakdown: {
