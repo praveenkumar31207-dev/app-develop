@@ -236,6 +236,7 @@ export const AddSaleView: React.FC<AddSaleViewProps> = ({
           </div>
           <button
             onClick={() => setLastSavedNotice(null)}
+            aria-label="Dismiss notification"
             className="text-white/80 hover:text-white p-1 shrink-0"
           >
             <X className="w-4 h-4" />
@@ -252,7 +253,9 @@ export const AddSaleView: React.FC<AddSaleViewProps> = ({
             {/* Search Input */}
             <div className="relative">
               <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <label htmlFor="retail-search" className="sr-only">Search products</label>
               <input
+                id="retail-search"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -262,6 +265,7 @@ export const AddSaleView: React.FC<AddSaleViewProps> = ({
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -385,9 +389,9 @@ export const AddSaleView: React.FC<AddSaleViewProps> = ({
                       <div key={item.product.id} className="pt-2 first:pt-0">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <h5 className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                            <p className="font-bold text-slate-900 text-xs sm:text-sm truncate">
                               {item.product.name}
-                            </h5>
+                            </p>
                             <p className="text-[11px] text-slate-600 font-medium">
                               {item.product.unit} • ₹{item.product.price} each
                             </p>
@@ -402,7 +406,7 @@ export const AddSaleView: React.FC<AddSaleViewProps> = ({
                           <button
                             onClick={() => handleRemoveFromCart(item.product.id)}
                             className="text-slate-300 hover:text-rose-500 p-1 transition-colors"
-                            title="Remove product"
+                            aria-label={`Remove ${item.product.name} from bill`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -413,12 +417,15 @@ export const AddSaleView: React.FC<AddSaleViewProps> = ({
                           <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => handleUpdateItemQuantity(item.product.id, -1)}
+                              aria-label={`Decrease quantity of ${item.product.name}`}
                               className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 flex items-center justify-center font-bold text-sm touch-active shadow-xs"
                             >
                               <Minus className="w-3.5 h-3.5" />
                             </button>
 
+                            <label htmlFor={`qty-${item.product.id}`} className="sr-only">Quantity of {item.product.name}</label>
                             <input
+                              id={`qty-${item.product.id}`}
                               type="number"
                               min={1}
                               value={item.quantity}
@@ -430,6 +437,7 @@ export const AddSaleView: React.FC<AddSaleViewProps> = ({
 
                             <button
                               onClick={() => handleUpdateItemQuantity(item.product.id, 1)}
+                              aria-label={`Increase quantity of ${item.product.name}`}
                               className="w-7 h-7 rounded-lg bg-sky-50 border border-sky-200 text-sky-700 hover:bg-sky-100 flex items-center justify-center font-bold text-sm touch-active shadow-xs"
                             >
                               <Plus className="w-3.5 h-3.5" />

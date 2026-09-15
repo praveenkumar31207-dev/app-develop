@@ -267,6 +267,7 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
           </div>
           <button
             onClick={() => setLastSavedNotice(null)}
+            aria-label="Dismiss notification"
             className="text-white/80 hover:text-white p-1 shrink-0"
           >
             <X className="w-4 h-4" />
@@ -298,7 +299,9 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
             {/* Search Input */}
             <div className="relative">
               <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <label htmlFor="wholesale-search" className="sr-only">Search wholesale products</label>
               <input
+                id="wholesale-search"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -308,6 +311,7 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -427,11 +431,12 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
 
             {/* Party / Buyer Name Field (Applies to the entire bulk order) */}
             <div>
-              <label className="block text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+              <label htmlFor="buyer-name" className="block text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
                 <Building2 className="w-3.5 h-3.5 text-amber-600" />
                 Buyer / Party Name (Optional)
               </label>
               <input
+                id="buyer-name"
                 type="text"
                 value={buyerName}
                 onChange={(e) => setBuyerName(e.target.value)}
@@ -463,9 +468,9 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
                       <div key={item.product.id} className="pt-2 first:pt-0">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <h5 className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                            <p className="font-bold text-slate-900 text-xs sm:text-sm truncate">
                               {item.product.name}
-                            </h5>
+                            </p>
                             <p className="text-[11px] text-amber-900 font-semibold">
                               {item.product.unit}
                             </p>
@@ -480,7 +485,7 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
                           <button
                             onClick={() => handleRemoveFromCart(item.product.id)}
                             className="text-slate-300 hover:text-rose-500 p-1 transition-colors"
-                            title="Remove product"
+                            aria-label={`Remove ${item.product.name} from wholesale order`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -493,12 +498,15 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
                             <div className="flex items-center gap-1.5">
                               <button
                                 onClick={() => handleUpdateItemQuantity(item.product.id, -1)}
+                                aria-label={`Decrease quantity of ${item.product.name}`}
                                 className="w-7 h-7 rounded-lg bg-white border border-amber-200 text-slate-700 hover:bg-amber-100 flex items-center justify-center font-bold text-sm touch-active shadow-xs"
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
 
+                              <label htmlFor={`ws-qty-${item.product.id}`} className="sr-only">Quantity of {item.product.name}</label>
                               <input
+                                id={`ws-qty-${item.product.id}`}
                                 type="number"
                                 min={1}
                                 value={item.quantity}
@@ -510,6 +518,7 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
 
                               <button
                                 onClick={() => handleUpdateItemQuantity(item.product.id, 1)}
+                                aria-label={`Increase quantity of ${item.product.name}`}
                                 className="w-7 h-7 rounded-lg bg-amber-100 border border-amber-300 text-amber-900 hover:bg-amber-200 flex items-center justify-center font-bold text-sm touch-active shadow-xs"
                               >
                                 <Plus className="w-3.5 h-3.5" />
@@ -519,7 +528,9 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
                             {/* Editable Wholesale Rate */}
                             <div className="flex items-center gap-1 text-xs">
                               <span className="text-slate-500 font-semibold">@ ₹</span>
+                              <label htmlFor={`ws-price-${item.product.id}`} className="sr-only">Wholesale price per unit for {item.product.name}</label>
                               <input
+                                id={`ws-price-${item.product.id}`}
                                 type="number"
                                 step={0.1}
                                 value={item.customPrice}
@@ -527,7 +538,6 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
                                   handleSetItemPrice(item.product.id, parseFloat(e.target.value) || 0)
                                 }
                                 className="w-16 px-1.5 py-0.5 text-right font-bold text-amber-900 bg-white border border-amber-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
-                                title="Custom wholesale price per unit"
                               />
                             </div>
                           </div>

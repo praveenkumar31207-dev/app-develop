@@ -43,6 +43,8 @@ export const DesktopSidebar: React.FC<NavigationProps> = ({ activeTab, onTabChan
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
               className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-sm transition-all text-left ${
                 isActive
                   ? isAddSale
@@ -102,6 +104,8 @@ export const MobileBottomNav: React.FC<NavigationProps> = ({ activeTab, onTabCha
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
+                aria-label="Retail Sale counter"
+                aria-current={isActive ? 'page' : undefined}
                 className="relative -top-2.5 flex flex-col items-center group touch-active focus:outline-none"
               >
                 <div
@@ -125,6 +129,8 @@ export const MobileBottomNav: React.FC<NavigationProps> = ({ activeTab, onTabCha
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
+                aria-label="Wholesale counter"
+                aria-current={isActive ? 'page' : undefined}
                 className="relative -top-2.5 flex flex-col items-center group touch-active focus:outline-none"
               >
                 <div
@@ -147,6 +153,8 @@ export const MobileBottomNav: React.FC<NavigationProps> = ({ activeTab, onTabCha
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
               className={`flex flex-col items-center py-1 px-1 rounded-lg transition-colors min-w-[44px] touch-active ${
                 isActive ? 'text-sky-800 font-semibold' : 'text-slate-600 hover:text-slate-900'
               }`}

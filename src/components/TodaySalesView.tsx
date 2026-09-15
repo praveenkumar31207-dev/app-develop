@@ -56,9 +56,9 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
           <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-sky-700 bg-sky-100/70 px-2 py-0.5 rounded-full">
             Counter Sales Dashboard
           </span>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">
             Today's Performance
-          </h2>
+          </h1>
           <p className="text-xs sm:text-sm text-slate-500">
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
@@ -68,6 +68,7 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={onNavigateToAddSale}
+            aria-label="Open Retail Sale counter"
             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-700/20 active:scale-95 transition-all"
           >
             <PlusCircle className="w-4 h-4" />
@@ -76,6 +77,7 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
 
           <button
             onClick={onNavigateToWholesale}
+            aria-label="Open Wholesale Supply counter"
             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-700/20 active:scale-95 transition-all"
           >
             <Truck className="w-4 h-4" />
@@ -174,9 +176,9 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
           <div className="p-3 sm:p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <PackageCheck className="w-4 h-4 text-sky-600" />
-              <h3 className="font-bold text-slate-800 text-xs sm:text-sm">
+              <h2 className="font-bold text-slate-800 text-xs sm:text-sm">
                 Today's Product Breakdown
-              </h3>
+              </h2>
             </div>
             <span className="text-[11px] text-slate-500">
               {todaySummary.productBreakdown.length} items sold
@@ -243,9 +245,9 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
           <div className="p-3 sm:p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-sky-600" />
-              <h3 className="font-bold text-slate-800 text-xs sm:text-sm">
+              <h2 className="font-bold text-slate-800 text-xs sm:text-sm">
                 Sales Transaction Feed
-              </h3>
+              </h2>
             </div>
 
             {/* Filter Toggle */}
@@ -314,7 +316,7 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
                       <button
                         onClick={() => setSaleToDelete(sale)}
                         className="text-slate-300 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors"
-                        title="Delete accidental entry"
+                        aria-label={`Delete ${sale.productName} sale entry`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

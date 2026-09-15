@@ -1,0 +1,9 @@
+fix: resolve all accessibility audit issues
+
+- Remove userScalable and maximumScale from viewport to allow zooming
+- Add aria-label to all icon-only buttons in Navigation, TodaySalesView, AddSaleView, WholesaleSaleView
+- Add aria-current page to active nav buttons
+- Add htmlFor and id to all unlabelled form inputs
+- Add sr-only labels for screen readers
+- Fix heading hierarchy across all views
+- Replace title attributes with aria-label on interactive buttons
