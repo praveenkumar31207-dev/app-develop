@@ -8,10 +8,19 @@ import {
   Truck, 
   X,
   Building2,
-  Tag
+  Tag,
+  Trash2,
+  RotateCcw,
+  PackageCheck
 } from 'lucide-react';
 import { Product } from '@/lib/types';
 import confetti from 'canvas-confetti';
+
+export interface WholesaleCartItem {
+  product: Product;
+  quantity: number;
+  customPrice: number;
+}
 
 interface WholesaleSaleViewProps {
   products: Product[];
@@ -25,6 +34,16 @@ interface WholesaleSaleViewProps {
     buyerName?: string;
     notes?: string;
   }) => void;
+  onRecordMultipleSales?: (entries: Array<{
+    productId: string;
+    productName: string;
+    unit: string;
+    quantity: number;
+    priceAtSale: number;
+    saleType: 'wholesale';
+    buyerName?: string;
+    notes?: string;
+  }>) => void;
   onNavigateToToday: () => void;
 }
 
@@ -41,12 +60,12 @@ const COMMON_BUYERS = [
 export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
   products,
   onRecordSale,
-  onNavigateToToday,
+  onRecordMultipleSales,
+  onNavigateToToday: _onNavigateToToday,
 }) => {
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [quantity, setQuantity] = useState<number>(10);
+  // Multi-item Wholesale Cart
+  const [cart, setCart] = useState<WholesaleCartItem[]>([]);
   const [buyerName, setBuyerName] = useState<string>('');
-  const [customPrice, setCustomPrice] = useState<number | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isSaving, setIsSaving] = useState(false);
@@ -80,20 +99,28 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
     });
   }, [activeProducts, selectedCategory, searchQuery]);
 
-  // Wholesale unit price fallback (default to wholesalePrice or 10% lower than retail)
-  const defaultWholesaleUnitPrice = selectedProduct
-    ? (selectedProduct.wholesalePrice || Math.round(selectedProduct.price * 0.9 * 10) / 10)
-    : 0;
+  // Calculate default wholesale price for a product
+  const getDefaultWholesalePrice = (product: Product): number => {
+    return product.wholesalePrice || Math.round(product.price * 0.9 * 10) / 10;
+  };
 
-  const effectivePrice = customPrice !== '' ? Number(customPrice) : defaultWholesaleUnitPrice;
-  const lineTotal = selectedProduct ? Math.round(quantity * effectivePrice * 100) / 100 : 0;
-
-  // Handle selecting a product
-  const handleSelectProduct = (product: Product) => {
-    setSelectedProduct(product);
-    setQuantity(10); // Normal default for bulk sale
-    const wsPrice = product.wholesalePrice || Math.round(product.price * 0.9 * 10) / 10;
-    setCustomPrice(wsPrice);
+  // Add product to wholesale order
+  const handleAddToCart = (product: Product) => {
+    setCart((prev) => {
+      const existingIndex = prev.findIndex((item) => item.product.id === product.id);
+      if (existingIndex > -1) {
+        const updated = [...prev];
+        // Add 5 more if already in bulk cart
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + 5,
+        };
+        return updated;
+      } else {
+        const initialPrice = getDefaultWholesalePrice(product);
+        return [...prev, { product, quantity: 10, customPrice: initialPrice }];
+      }
+    });
 
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setTimeout(() => {
@@ -105,46 +132,122 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
     }
   };
 
-  const handleAddQuantity = (increment: number) => {
-    setQuantity((prev) => Math.max(1, prev + increment));
+  // Adjust item quantity
+  const handleUpdateItemQuantity = (productId: string, delta: number) => {
+    setCart((prev) => {
+      return prev
+        .map((item) => {
+          if (item.product.id === productId) {
+            const newQty = item.quantity + delta;
+            return newQty > 0 ? { ...item, quantity: newQty } : null;
+          }
+          return item;
+        })
+        .filter((item): item is WholesaleCartItem => item !== null);
+    });
   };
 
+  // Set explicit quantity
+  const handleSetItemQuantity = (productId: string, val: number) => {
+    setCart((prev) => {
+      return prev.map((item) => {
+        if (item.product.id === productId) {
+          return { ...item, quantity: Math.max(1, isNaN(val) ? 1 : val) };
+        }
+        return item;
+      });
+    });
+  };
+
+  // Set explicit custom price per item
+  const handleSetItemPrice = (productId: string, val: number) => {
+    setCart((prev) => {
+      return prev.map((item) => {
+        if (item.product.id === productId) {
+          return { ...item, customPrice: Math.max(0, isNaN(val) ? 0 : val) };
+        }
+        return item;
+      });
+    });
+  };
+
+  // Remove item
+  const handleRemoveFromCart = (productId: string) => {
+    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  };
+
+  // Clear entire order
+  const handleClearCart = () => {
+    setCart([]);
+  };
+
+  // Cart totals summary
+  const wholesaleSummary = useMemo(() => {
+    let totalItems = 0;
+    let totalUnits = 0;
+    let totalAmount = 0;
+
+    cart.forEach((item) => {
+      totalItems += 1;
+      totalUnits += item.quantity;
+      totalAmount += Math.round(item.quantity * item.customPrice * 100) / 100;
+    });
+
+    return {
+      totalItems,
+      totalUnits,
+      totalAmount: Math.round(totalAmount * 100) / 100,
+    };
+  }, [cart]);
+
+  // Commit Wholesale Order
   const handleCommitSale = () => {
-    if (!selectedProduct || quantity <= 0 || isSubmittingRef.current) return;
+    if (cart.length === 0 || isSubmittingRef.current) return;
 
     isSubmittingRef.current = true;
     setIsSaving(true);
 
     try {
-      onRecordSale({
-        productId: selectedProduct.id,
-        productName: selectedProduct.name,
-        unit: selectedProduct.unit,
-        quantity: Number(quantity),
-        priceAtSale: effectivePrice,
-        saleType: 'wholesale',
-        buyerName: buyerName.trim() || 'Wholesale Party',
-      });
+      const entries = cart.map((item) => ({
+        productId: item.product.id,
+        productName: item.product.name,
+        unit: item.product.unit,
+        quantity: Number(item.quantity),
+        priceAtSale: item.customPrice,
+        saleType: 'wholesale' as const,
+        buyerName: buyerName.trim() || undefined,
+      }));
 
-      const noticeText = `Saved Wholesale: ${quantity} × ${selectedProduct.name} @ ₹${effectivePrice} = ₹${lineTotal.toLocaleString('en-IN')}`;
+      if (onRecordMultipleSales) {
+        onRecordMultipleSales(entries);
+      } else {
+        entries.forEach((e) => onRecordSale(e));
+      }
+
+      const buyerLabel = buyerName.trim() ? ` for ${buyerName.trim()}` : '';
+      const noticeText = cart.length === 1
+        ? `Saved Wholesale: ${cart[0].quantity} × ${cart[0].product.name}${buyerLabel} = ₹${wholesaleSummary.totalAmount}`
+        : `Saved Wholesale Order${buyerLabel}: ${cart.length} items (${wholesaleSummary.totalUnits} units) = ₹${wholesaleSummary.totalAmount}`;
+      
       setLastSavedNotice(noticeText);
 
+      // Confetti burst
       try {
         confetti({
-          particleCount: 25,
-          spread: 50,
+          particleCount: 35,
+          spread: 60,
           origin: { y: 0.8 },
-          colors: ['#d97706', '#059669', '#0284c7'],
+          colors: ['#d97706', '#b45309', '#f59e0b'],
         });
       } catch {}
 
-      setSelectedProduct(null);
-      setQuantity(10);
-      setCustomPrice('');
+      // Reset cart
+      setCart([]);
+      setBuyerName('');
 
       setTimeout(() => {
         setLastSavedNotice((current) => (current === noticeText ? null : current));
-      }, 3500);
+      }, 4000);
     } finally {
       setTimeout(() => {
         setIsSaving(false);
@@ -154,7 +257,7 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
   };
 
   return (
-    <div className="space-y-3 pb-32 sm:pb-24 max-w-5xl mx-auto">
+    <div className="space-y-3 pb-32 sm:pb-24 max-w-6xl mx-auto">
       {/* Top Banner with Quick Saved Feedback */}
       {lastSavedNotice && (
         <div className="bg-amber-600 text-white px-3.5 py-2.5 rounded-xl shadow-md flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200 sticky top-14 z-20">
@@ -171,20 +274,22 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
         </div>
       )}
 
-      {/* Counter Header Banner */}
+      {/* Wholesale Counter Header Banner */}
       <div className="bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 text-white p-3.5 sm:p-4 rounded-2xl shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
             <Truck className="w-5 h-5 text-amber-200" />
           </div>
           <div>
-            <h2 className="font-extrabold text-base sm:text-lg">Wholesale Sales Counter</h2>
-            <p className="text-[11px] text-amber-200/90">Same easy counter layout with wholesale discount pricing</p>
+            <h2 className="font-extrabold text-base sm:text-lg">Wholesale & Bulk Counter</h2>
+            <p className="text-[11px] text-amber-200/90">
+              Calculate multiple bulk products together with wholesale rates
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Main Split Grid (Exact same layout as normal Add Sale Counter) */}
+      {/* Main Split Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-5 items-start">
         {/* Left Column: Product Selection List */}
         <div className="lg:col-span-7 space-y-2.5">
@@ -198,7 +303,7 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search milk, curd, ghee, paneer..."
-                className="w-full pl-9 sm:pl-10 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium text-slate-800 placeholder:text-slate-400"
+                className="w-full pl-9 sm:pl-10 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-600 font-medium text-slate-900 placeholder:text-slate-500"
               />
               {searchQuery && (
                 <button
@@ -220,8 +325,8 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all touch-active ${
                       isActive
-                        ? 'bg-amber-600 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-amber-700 text-white shadow-sm'
+                        : 'bg-slate-200 text-slate-800 hover:bg-slate-300'
                     }`}
                   >
                     {cat}
@@ -231,7 +336,7 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
             </div>
           </div>
 
-          {/* Product Items List (Tappable Rows with Wholesale Prices) */}
+          {/* Product Items List (Wholesale Prices) */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
             {filteredProducts.length === 0 ? (
               <div className="p-8 text-center text-slate-400">
@@ -239,20 +344,21 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
               </div>
             ) : (
               filteredProducts.map((prod) => {
-                const isSelected = selectedProduct?.id === prod.id;
-                const wsPrice = prod.wholesalePrice || Math.round(prod.price * 0.9 * 10) / 10;
+                const inCartItem = cart.find((i) => i.product.id === prod.id);
+                const isSelected = Boolean(inCartItem);
+                const wsPrice = getDefaultWholesalePrice(prod);
 
                 return (
                   <button
                     key={prod.id}
-                    onClick={() => handleSelectProduct(prod)}
+                    onClick={() => handleAddToCart(prod)}
                     className={`w-full text-left p-2.5 sm:p-4 flex items-center justify-between gap-2.5 transition-all touch-active ${
                       isSelected
-                        ? 'bg-amber-50 ring-2 ring-inset ring-amber-500'
+                        ? 'bg-amber-50/90 border-l-4 border-l-amber-600'
                         : 'hover:bg-slate-50 active:bg-slate-100'
                     }`}
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-1.5 flex-wrap">
                         <span className="font-bold text-slate-900 text-xs sm:text-base leading-tight">
                           {prod.name}
@@ -263,7 +369,7 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 font-medium flex items-center gap-1.5">
+                      <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5 font-medium flex items-center gap-1.5">
                         <span>{prod.unit}</span>
                         <span>•</span>
                         <span className="line-through text-slate-400">₹{prod.price} retail</span>
@@ -279,15 +385,18 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
                           Wholesale
                         </span>
                       </div>
-                      <div
-                        className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors ${
-                          isSelected
-                            ? 'bg-amber-600 text-white'
-                            : 'border border-slate-300 text-slate-400'
-                        }`}
-                      >
-                        {isSelected ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                      </div>
+
+                      {/* Quantity in bill indicator badge or Add icon */}
+                      {isSelected ? (
+                        <span className="bg-amber-600 text-white font-extrabold text-xs px-2 py-1 rounded-full min-w-[32px] text-center shadow-sm flex items-center gap-0.5">
+                          <span>{inCartItem?.quantity}</span>
+                          <span className="text-[9px] opacity-80">u</span>
+                        </span>
+                      ) : (
+                        <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center border border-slate-300 text-slate-400 hover:bg-amber-600 hover:text-white transition-colors">
+                          <Plus className="w-3.5 h-3.5" />
+                        </div>
+                      )}
                     </div>
                   </button>
                 );
@@ -296,149 +405,179 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Normal Counter Calculator Styled for Wholesale */}
+        {/* Right Column: Wholesale Multi-Product Calculator & Party Order Box */}
         <div id="wholesale-counter-calc-box" className="lg:col-span-5 lg:sticky lg:top-20">
-          <div className="bg-white rounded-2xl border-2 border-amber-300 shadow-md p-4 sm:p-5 space-y-3 sm:space-y-4">
+          <div className="bg-white rounded-2xl border-2 border-amber-300 shadow-md p-3.5 sm:p-5 space-y-3 sm:space-y-4">
+            {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1">
                 <Truck className="w-3.5 h-3.5" />
-                Wholesale Calculator
+                Wholesale Order ({wholesaleSummary.totalItems} {wholesaleSummary.totalItems === 1 ? 'item' : 'items'})
               </span>
-              {selectedProduct && (
+              {cart.length > 0 && (
                 <button
-                  onClick={() => setSelectedProduct(null)}
-                  className="text-xs text-rose-500 hover:text-rose-700 font-medium"
+                  onClick={handleClearCart}
+                  className="text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1 transition-colors"
                 >
-                  Clear Selection
+                  <RotateCcw className="w-3 h-3" />
+                  Clear All
                 </button>
               )}
             </div>
 
-            {selectedProduct ? (
-              <div className="space-y-3.5 animate-in fade-in duration-150">
-                {/* Selected Item Summary Card */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base leading-tight">
-                    {selectedProduct.name}
-                  </h4>
-                  <div className="flex items-center justify-between text-xs text-amber-900 font-medium mt-1">
-                    <span>{selectedProduct.unit}</span>
-                    <span className="font-bold">Wholesale Rate: ₹{effectivePrice}</span>
-                  </div>
+            {/* Party / Buyer Name Field (Applies to the entire bulk order) */}
+            <div>
+              <label className="block text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Building2 className="w-3.5 h-3.5 text-amber-600" />
+                Buyer / Party Name (Optional)
+              </label>
+              <input
+                type="text"
+                value={buyerName}
+                onChange={(e) => setBuyerName(e.target.value)}
+                placeholder="e.g. Murugan Tea Stall / Hotel Saravana..."
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              {/* Quick Party chips */}
+              <div className="flex items-center gap-1 overflow-x-auto pt-1.5 pb-0.5 scrollbar-none">
+                {COMMON_BUYERS.slice(0, 4).map((b) => (
+                  <button
+                    key={b}
+                    onClick={() => setBuyerName(b)}
+                    className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-600 rounded-md font-medium whitespace-nowrap transition-colors"
+                  >
+                    {b}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {cart.length > 0 ? (
+              <div className="space-y-3 animate-in fade-in duration-150">
+                {/* Scrollable list of items in current wholesale bill */}
+                <div className="max-h-72 overflow-y-auto space-y-2.5 pr-1 divide-y divide-slate-100">
+                  {cart.map((item) => {
+                    const lineSubtotal = Math.round(item.quantity * item.customPrice * 100) / 100;
+
+                    return (
+                      <div key={item.product.id} className="pt-2 first:pt-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <h5 className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                              {item.product.name}
+                            </h5>
+                            <p className="text-[11px] text-amber-900 font-semibold">
+                              {item.product.unit}
+                            </p>
+                          </div>
+                          
+                          <div className="text-right shrink-0">
+                            <span className="font-extrabold text-sm sm:text-base text-amber-900">
+                              ₹{lineSubtotal.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => handleRemoveFromCart(item.product.id)}
+                            className="text-slate-300 hover:text-rose-500 p-1 transition-colors"
+                            title="Remove product"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Controls: Bulk Quantity & Wholesale Unit Price */}
+                        <div className="mt-1.5 bg-amber-50/50 p-2 rounded-xl border border-amber-200/70 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            {/* Quantity Stepper */}
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleUpdateItemQuantity(item.product.id, -1)}
+                                className="w-7 h-7 rounded-lg bg-white border border-amber-200 text-slate-700 hover:bg-amber-100 flex items-center justify-center font-bold text-sm touch-active shadow-xs"
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                              </button>
+
+                              <input
+                                type="number"
+                                min={1}
+                                value={item.quantity}
+                                onChange={(e) =>
+                                  handleSetItemQuantity(item.product.id, parseInt(e.target.value, 10))
+                                }
+                                className="w-14 text-center text-sm font-extrabold text-amber-950 bg-white border border-amber-200 rounded-lg py-0.5 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                              />
+
+                              <button
+                                onClick={() => handleUpdateItemQuantity(item.product.id, 1)}
+                                className="w-7 h-7 rounded-lg bg-amber-100 border border-amber-300 text-amber-900 hover:bg-amber-200 flex items-center justify-center font-bold text-sm touch-active shadow-xs"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            {/* Editable Wholesale Rate */}
+                            <div className="flex items-center gap-1 text-xs">
+                              <span className="text-slate-500 font-semibold">@ ₹</span>
+                              <input
+                                type="number"
+                                step={0.1}
+                                value={item.customPrice}
+                                onChange={(e) =>
+                                  handleSetItemPrice(item.product.id, parseFloat(e.target.value) || 0)
+                                }
+                                className="w-16 px-1.5 py-0.5 text-right font-bold text-amber-900 bg-white border border-amber-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                title="Custom wholesale price per unit"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Bulk Multipliers (+5, +10, +20, +50) */}
+                          <div className="flex items-center justify-between gap-1 pt-1 border-t border-amber-200/50">
+                            <span className="text-[10px] text-amber-800 font-semibold">Bulk Add:</span>
+                            <div className="flex items-center gap-1">
+                              {[5, 10, 20, 50].map((amt) => (
+                                <button
+                                  key={amt}
+                                  onClick={() => handleUpdateItemQuantity(item.product.id, amt)}
+                                  className="text-[10px] px-1.5 py-0.5 bg-white hover:bg-amber-100 border border-amber-200 rounded-md font-bold text-amber-900"
+                                >
+                                  +{amt}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                {/* Optional Buyer / Party Name */}
-                <div>
-                  <label className="block text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <Building2 className="w-3.5 h-3.5 text-amber-600" />
-                    Buyer / Shop Name (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={buyerName}
-                    onChange={(e) => setBuyerName(e.target.value)}
-                    placeholder="e.g. Murugan Tea Stall / Hotel..."
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                  {/* Quick Party chips */}
-                  <div className="flex items-center gap-1 overflow-x-auto pt-1.5 pb-0.5 scrollbar-none">
-                    {COMMON_BUYERS.slice(0, 4).map((b) => (
-                      <button
-                        key={b}
-                        onClick={() => setBuyerName(b)}
-                        className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-600 rounded-md font-medium whitespace-nowrap transition-colors"
-                      >
-                        {b}
-                      </button>
-                    ))}
+                {/* Grand Live Wholesale Bill Total Card */}
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-center shadow-xs">
+                  <div className="flex items-center justify-between text-xs font-bold text-amber-950 border-b border-amber-300 pb-1.5 mb-1.5">
+                    <span>TOTAL UNITS: {wholesaleSummary.totalUnits}</span>
+                    <span>{wholesaleSummary.totalItems} PRODUCTS</span>
                   </div>
-                </div>
-
-                {/* Quantity Stepper (Exact same familiar counter interface) */}
-                <div>
-                  <label className="block text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                    Quantity (Units / Packets)
-                  </label>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <button
-                      onClick={() => handleAddQuantity(-1)}
-                      disabled={quantity <= 1}
-                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-slate-800 font-extrabold text-xl border border-slate-200 touch-active shadow-sm"
-                    >
-                      <Minus className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </button>
-
-                    <input
-                      type="number"
-                      min={1}
-                      step={1}
-                      value={quantity}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        setQuantity(isNaN(val) || val < 1 ? 1 : val);
-                      }}
-                      className="flex-1 h-12 sm:h-14 text-center text-2xl sm:text-3xl font-extrabold text-slate-900 bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-amber-600 focus:outline-none"
-                    />
-
-                    <button
-                      onClick={() => handleAddQuantity(1)}
-                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 flex items-center justify-center font-extrabold text-xl border border-amber-200 touch-active shadow-sm"
-                    >
-                      <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </button>
-                  </div>
-
-                  {/* Quantity Stepper Multipliers for Bulk (+5, +10, +20, +50) */}
-                  <div className="grid grid-cols-4 gap-1.5 sm:gap-2 mt-2">
-                    {[5, 10, 20, 50].map((inc) => (
-                      <button
-                        key={inc}
-                        onClick={() => handleAddQuantity(inc)}
-                        className="py-1.5 sm:py-2 rounded-lg bg-amber-50/70 hover:bg-amber-100 text-amber-900 font-bold text-xs border border-amber-200/80 touch-active"
-                      >
-                        +{inc}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Editable Wholesale Price field */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
-                    <Tag className="w-3.5 h-3.5 text-amber-600" />
-                    Wholesale Price per Unit (₹)
-                  </label>
-                  <input
-                    type="number"
-                    step={0.1}
-                    value={customPrice}
-                    onChange={(e) => setCustomPrice(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold text-amber-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-
-                {/* Live Auto-Calculated Wholesale Total */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-                  <span className="text-[10px] sm:text-xs font-bold text-amber-900 uppercase tracking-wider block">
-                    Wholesale Total
+                  <span className="text-[10px] sm:text-xs font-bold text-amber-950 uppercase tracking-wider block">
+                    Grand Wholesale Total
                   </span>
-                  <div className="text-2xl sm:text-4xl font-black text-amber-900 mt-0.5 flex items-center justify-center tracking-tight">
-                    <IndianRupee className="w-5 h-5 sm:w-7 sm:h-7 inline text-amber-700" />
-                    {lineTotal.toLocaleString('en-IN')}
+                  <div className="text-3xl sm:text-4xl font-black text-amber-950 mt-0.5 flex items-center justify-center tracking-tight">
+                    <IndianRupee className="w-6 h-6 sm:w-7 sm:h-7 inline text-amber-800" />
+                    {wholesaleSummary.totalAmount.toLocaleString('en-IN')}
                   </div>
-                  <p className="text-[11px] sm:text-xs text-amber-800 mt-0.5 font-medium">
-                    ({quantity} units × ₹{effectivePrice})
-                  </p>
                 </div>
 
-                {/* Big Action Button to Record */}
+                {/* Primary Record Wholesale Order Button */}
                 <button
                   onClick={handleCommitSale}
-                  disabled={isSaving || quantity <= 0}
-                  className="w-full py-3.5 sm:py-4 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-extrabold text-base sm:text-lg shadow-lg shadow-amber-700/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 touch-active"
+                  disabled={isSaving || cart.length === 0}
+                  className="w-full py-3.5 sm:py-4 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-extrabold text-base sm:text-lg shadow-lg shadow-amber-700/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 touch-active cursor-pointer"
                 >
                   <Check className="w-5 h-5 sm:w-6 sm:h-6" />
-                  <span>Record Wholesale (₹{lineTotal.toLocaleString('en-IN')})</span>
+                  <span>
+                    Record Wholesale (₹{wholesaleSummary.totalAmount.toLocaleString('en-IN')})
+                  </span>
                 </button>
               </div>
             ) : (
@@ -447,9 +586,9 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
                   <Truck className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-slate-700 text-sm sm:text-base">Tap any product to enter wholesale sale</p>
-                  <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-                    Select a product above to calculate with wholesale pricing.
+                  <p className="font-bold text-slate-700 text-sm sm:text-base">Tap products to add to wholesale order</p>
+                  <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 max-w-xs mx-auto">
+                    Select multiple wholesale items together, customize quantities and rates, and record one consolidated order.
                   </p>
                 </div>
               </div>

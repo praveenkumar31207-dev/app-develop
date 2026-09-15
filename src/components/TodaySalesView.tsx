@@ -98,9 +98,9 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
             <span className="text-emerald-600 mr-0.5 text-base sm:text-xl">₹</span>
             {todaySummary.totalRevenue.toLocaleString('en-IN')}
           </div>
-          <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 truncate">
+          <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600">
             {todaySummary.totalUnits} items • {todaySummary.totalTransactions} bills
-          </p>
+          </span>
         </div>
 
         {/* Retail Counter Counter */}
@@ -115,7 +115,7 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
             <span className="mr-0.5 text-base sm:text-xl">₹</span>
             {(todaySummary.retailRevenue || 0).toLocaleString('en-IN')}
           </div>
-          <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 truncate">
+          <p className="text-[10px] sm:text-xs text-slate-600 font-semibold mt-0.5 truncate">
             {todaySummary.retailUnits || 0} retail packets
           </p>
         </div>
@@ -132,7 +132,7 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
             <span className="mr-0.5 text-base sm:text-xl">₹</span>
             {(todaySummary.wholesaleRevenue || 0).toLocaleString('en-IN')}
           </div>
-          <p className="text-[10px] sm:text-xs text-amber-700 mt-0.5 truncate">
+          <p className="text-[10px] sm:text-xs text-amber-800 font-semibold mt-0.5 truncate">
             {todaySummary.wholesaleUnits || 0} bulk units supplied
           </p>
         </div>
@@ -228,7 +228,7 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
                     <p className="font-bold text-slate-900 text-xs sm:text-sm">
                       ₹{item.totalRevenue.toLocaleString('en-IN')}
                     </p>
-                    <p className="text-[11px] text-slate-500 font-medium">
+                    <p className="text-[11px] text-slate-600 font-semibold">
                       {item.totalQuantity} total units
                     </p>
                   </div>
@@ -299,7 +299,7 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-slate-400 mt-0.5">
+                      <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-slate-600 mt-0.5 font-medium">
                         <span>{formatTime(sale.timestamp)}</span>
                         <span>•</span>
                         <span>{sale.quantity} units @ ₹{sale.priceAtSale}</span>

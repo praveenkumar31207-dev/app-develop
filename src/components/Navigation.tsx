@@ -58,7 +58,7 @@ export const DesktopSidebar: React.FC<NavigationProps> = ({ activeTab, onTabChan
               }`}
             >
               <Icon className={`w-5 h-5 ${
-                isActive ? 'text-white' : isAddSale ? 'text-emerald-600' : isWholesale ? 'text-amber-600' : 'text-slate-500'
+                isActive ? 'text-white' : isAddSale ? 'text-emerald-700' : isWholesale ? 'text-amber-700' : 'text-slate-600'
               }`} />
               <span>{item.label}</span>
               {isWholesale && !isActive && (
@@ -148,10 +148,10 @@ export const MobileBottomNav: React.FC<NavigationProps> = ({ activeTab, onTabCha
               key={item.id}
               onClick={() => onTabChange(item.id)}
               className={`flex flex-col items-center py-1 px-1 rounded-lg transition-colors min-w-[44px] touch-active ${
-                isActive ? 'text-sky-700 font-semibold' : 'text-slate-500 hover:text-slate-800'
+                isActive ? 'text-sky-800 font-semibold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-sky-600' : 'text-slate-400'}`} />
+              <Icon className={`w-4 h-4 ${isActive ? 'text-sky-700' : 'text-slate-500'}`} />
               <span className="text-[9px] mt-0.5 leading-tight truncate max-w-[48px]">
                 {item.label}
               </span>

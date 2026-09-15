@@ -51,9 +51,12 @@ END $$;
 ALTER TABLE public.shop_backups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 
--- 3. Drop legacy overly permissive ALL policies
+-- 3. Drop existing policies safely so re-running never errors
 DROP POLICY IF EXISTS "Allow public read-write for parlour backups" ON public.shop_backups;
 DROP POLICY IF EXISTS "Allow public read-write for parlour sales" ON public.sales;
+DROP POLICY IF EXISTS "Allow public read-write for backups" ON public.shop_backups;
+DROP POLICY IF EXISTS "Allow public read sales" ON public.sales;
+DROP POLICY IF EXISTS "Allow delete sales" ON public.sales;
 DROP POLICY IF EXISTS "Allow read shop backups" ON public.shop_backups;
 DROP POLICY IF EXISTS "Allow insert shop backups" ON public.shop_backups;
 DROP POLICY IF EXISTS "Allow update shop backups" ON public.shop_backups;

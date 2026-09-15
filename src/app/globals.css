@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
+  --background: #f1f5f9;
   --foreground: #0f172a;
-  --dairy-blue: #0284c7;
-  --dairy-dark: #0369a1;
+  --dairy-blue: #0369a1;
+  --dairy-dark: #075985;
   --dairy-light: #e0f2fe;
-  --dairy-accent: #059669;
+  --dairy-accent: #047857;
 }
 
 body {
@@ -17,6 +17,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 /* Custom scrollbars for fast counter lists */
@@ -25,18 +27,24 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #e2e8f0;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #94a3b8;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #64748b;
 }
 
 /* Touch feedback utility */
 .touch-active:active {
   transform: scale(0.97);
   transition: transform 0.08s ease-in-out;
+}
+
+/* Ensure inputs are selectable */
+input, textarea, select {
+  user-select: text;
 }

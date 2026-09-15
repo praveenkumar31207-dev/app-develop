@@ -112,10 +112,24 @@ export const storage = {
     buyerName?: string;
     notes?: string;
   }): SaleEntry {
+    return this.saveMultipleSales([entry])[0];
+  },
+
+  saveMultipleSales(entries: Array<{
+    productId: string;
+    productName: string;
+    unit: string;
+    quantity: number;
+    priceAtSale: number;
+    saleType?: SaleType;
+    buyerName?: string;
+    notes?: string;
+  }>): SaleEntry[] {
+    if (!entries || entries.length === 0) return [];
     const sales = this.getSales();
     const now = new Date();
-    const newSale: SaleEntry = {
-      id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    const newSales: SaleEntry[] = entries.map((entry, index) => ({
+      id: `sale-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 6)}`,
       productId: entry.productId,
       productName: entry.productName,
       unit: entry.unit,
@@ -127,10 +141,10 @@ export const storage = {
       timestamp: now.toISOString(),
       dateStr: getLocalDateString(now),
       notes: entry.notes,
-    };
-    sales.unshift(newSale); // newest first
+    }));
+    sales.unshift(...newSales); // newest first
     safeSet(SALES_KEY, sales);
-    return newSale;
+    return newSales;
   },
 
   deleteSale(id: string): boolean {
@@ -390,8 +404,9 @@ export const storage = {
         message: `Successfully imported ${data.products.length} products and ${data.sales.length} sales records.`,
         count: data.sales.length,
       };
-    } catch (err: any) {
-      return { success: false, message: `Failed to parse file: ${err.message}` };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, message: `Failed to parse file: ${msg}` };
     }
   },
 

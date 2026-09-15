@@ -19,8 +19,8 @@ export const syncEngine = {
         return { ok: false, message: error.message };
       }
       return { ok: true, message: 'Connected to Supabase successfully' };
-    } catch (err: any) {
-      return { ok: false, message: err?.message || 'Network error' };
+    } catch (err: unknown) {
+      return { ok: false, message: err instanceof Error ? err.message : 'Network error' };
     }
   },
 
@@ -49,7 +49,7 @@ export const syncEngine = {
         synced_at: now,
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('shop_backups')
         .upsert(payload, { onConflict: 'shop_id' });
 
@@ -91,8 +91,8 @@ export const syncEngine = {
         message: `Synced ${sales.length} sales & ${products.length} products to Supabase cloud.`,
         timestamp: now,
       };
-    } catch (err: any) {
-      return { success: false, message: err?.message || 'Sync failed.' };
+    } catch (err: unknown) {
+      return { success: false, message: err instanceof Error ? err.message : 'Sync failed.' };
     }
   },
 
@@ -120,8 +120,8 @@ export const syncEngine = {
         success: true,
         message: `Restored ${data.total_sales || 0} sales and ${data.total_products || 0} products from Supabase.`,
       };
-    } catch (err: any) {
-      return { success: false, message: err?.message || 'Restore failed.' };
+    } catch (err: unknown) {
+      return { success: false, message: err instanceof Error ? err.message : 'Restore failed.' };
     }
   },
 

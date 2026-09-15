@@ -109,7 +109,7 @@ export default function Home() {
     };
   }, [reloadData, triggerCloudBackup]);
 
-  // Handler: Record sale (Supports both retail and wholesale)
+  // Handler: Record single sale
   const handleRecordSale = (entry: {
     productId: string;
     productName: string;
@@ -121,6 +121,25 @@ export default function Home() {
     notes?: string;
   }) => {
     storage.saveSale(entry);
+    reloadData();
+    if (navigator.onLine) {
+      triggerCloudBackup();
+    }
+  };
+
+  // Handler: Record multiple sales at once (Multi-product order/bill)
+  const handleRecordMultipleSales = (entries: Array<{
+    productId: string;
+    productName: string;
+    unit: string;
+    quantity: number;
+    priceAtSale: number;
+    saleType?: SaleType;
+    buyerName?: string;
+    notes?: string;
+  }>) => {
+    if (!entries || entries.length === 0) return;
+    storage.saveMultipleSales(entries);
     reloadData();
     if (navigator.onLine) {
       triggerCloudBackup();
@@ -215,6 +234,7 @@ export default function Home() {
             <AddSaleView
               products={products}
               onRecordSale={handleRecordSale}
+              onRecordMultipleSales={handleRecordMultipleSales}
               onNavigateToToday={() => setActiveTab('today')}
             />
           )}
@@ -223,6 +243,7 @@ export default function Home() {
             <WholesaleSaleView
               products={products}
               onRecordSale={handleRecordSale}
+              onRecordMultipleSales={handleRecordMultipleSales}
               onNavigateToToday={() => setActiveTab('today')}
             />
           )}
