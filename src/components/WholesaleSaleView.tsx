@@ -8,10 +8,8 @@ import {
   Truck, 
   X,
   Building2,
-  Tag,
   Trash2,
-  RotateCcw,
-  PackageCheck
+  RotateCcw
 } from 'lucide-react';
 import { Product } from '@/lib/types';
 import confetti from 'canvas-confetti';
@@ -61,7 +59,6 @@ export const WholesaleSaleView: React.FC<WholesaleSaleViewProps> = ({
   products,
   onRecordSale,
   onRecordMultipleSales,
-  onNavigateToToday: _onNavigateToToday,
 }) => {
   // Multi-item Wholesale Cart
   const [cart, setCart] = useState<WholesaleCartItem[]>([]);

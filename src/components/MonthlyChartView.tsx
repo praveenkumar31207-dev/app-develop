@@ -10,7 +10,7 @@ import {
   Cell
 } from 'recharts';
 import { MonthlySummary } from '@/lib/types';
-import { IndianRupee, TrendingUp, Calendar, X } from 'lucide-react';
+import { IndianRupee, TrendingUp, X } from 'lucide-react';
 
 interface MonthlyChartViewProps {
   recentMonths: MonthlySummary[];
@@ -85,9 +85,10 @@ export const MonthlyChartView: React.FC<MonthlyChartViewProps> = ({ recentMonths
             <BarChart
               data={chartData}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-              onClick={(e: any) => {
-                if (e && e.activePayload && e.activePayload.length) {
-                  setSelectedMonth(e.activePayload[0].payload.raw);
+              onClick={(e) => {
+                const eventData = e as unknown as { activePayload?: { payload: { raw: MonthlySummary } }[] };
+                if (eventData && eventData.activePayload && eventData.activePayload.length) {
+                  setSelectedMonth(eventData.activePayload[0].payload.raw);
                 }
               }}
             >
@@ -100,7 +101,7 @@ export const MonthlyChartView: React.FC<MonthlyChartViewProps> = ({ recentMonths
                 tickFormatter={(val) => `₹${val}`}
               />
               <Tooltip
-                formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Monthly Total']}
+                formatter={(val: string | number | readonly (string | number)[] | undefined) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Monthly Total']}
                 labelFormatter={(label, payload) => {
                   if (payload && payload[0]) {
                     return `Month: ${payload[0].payload.raw.monthStr}`;
@@ -152,7 +153,7 @@ export const MonthlyChartView: React.FC<MonthlyChartViewProps> = ({ recentMonths
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100">
-              <span className="text-xs text-emerald-800 font-medium">Month's Revenue</span>
+              <span className="text-xs text-emerald-800 font-medium">Month&apos;s Revenue</span>
               <p className="text-lg font-bold text-emerald-950 mt-0.5">
                 ₹{selectedMonth.totalRevenue.toLocaleString('en-IN')}
               </p>

@@ -73,7 +73,7 @@ export const CounterHeader: React.FC<CounterHeaderProps> = ({
         <div className="flex items-center gap-2">
           <div className="bg-sky-950/80 border border-sky-400/40 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-right shadow-sm">
             <span className="text-[9px] sm:text-[11px] font-semibold uppercase tracking-wider text-sky-300 block leading-none">
-              Today's Sales
+              Today&apos;s Sales
             </span>
             <div className="flex items-baseline justify-end gap-1 mt-0.5">
               <span className="text-emerald-300 font-extrabold text-base sm:text-2xl leading-none flex items-center tracking-tight">

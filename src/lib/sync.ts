@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { storage } from './storage';
-import { Product, SaleEntry, ShopProfile } from './types';
+import { Product, ShopProfile } from './types';
 
 export interface SyncStatus {
   isOnline: boolean;
@@ -13,7 +13,7 @@ export const syncEngine = {
   // Check Supabase connection and table readiness
   async checkConnection(): Promise<{ ok: boolean; message: string }> {
     try {
-      const { data, error } = await supabase.from('shop_backups').select('id').limit(1);
+      const { error } = await supabase.from('shop_backups').select('id').limit(1);
       if (error) {
         // Table might not exist yet; try creating or report schema needed
         return { ok: false, message: error.message };

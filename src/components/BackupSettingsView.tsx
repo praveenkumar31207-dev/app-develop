@@ -1,7 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { 
   Download, 
-  Upload, 
   Trash2, 
   Store, 
   FileSpreadsheet, 
@@ -9,8 +8,7 @@ import {
   Check, 
   Cloud, 
   RefreshCw,
-  Info,
-  ExternalLink
+  Info
 } from 'lucide-react';
 import { ShopProfile } from '@/lib/types';
 import { storage } from '@/lib/storage';
@@ -39,7 +37,6 @@ export const BackupSettingsView: React.FC<BackupSettingsViewProps> = ({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [cloudMsg, setCloudMsg] = useState<string | null>(null);
   const [isRestoringCloud, setIsRestoringCloud] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const lastSynced = syncEngine.getLastSyncedAt();
 
@@ -235,6 +232,19 @@ export const BackupSettingsView: React.FC<BackupSettingsViewProps> = ({
                 required
                 value={franchiseBrand}
                 onChange={(e) => setFranchiseBrand(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Tagline / Branch Subtitle
+              </label>
+              <input
+                type="text"
+                value={tagline}
+                onChange={(e) => setTagline(e.target.value)}
+                placeholder="e.g. Fresh Dairy & Sweets Daily"
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>

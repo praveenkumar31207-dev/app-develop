@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { 
   IndianRupee, 
-  ShoppingBag, 
   TrendingUp, 
   PlusCircle, 
   Trash2, 
   AlertCircle,
   Clock,
-  ChevronRight,
   PackageCheck,
   Truck,
   Store
@@ -26,7 +24,6 @@ interface TodaySalesViewProps {
 export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
   todaySummary,
   recentSales,
-  profile,
   onNavigateToAddSale,
   onNavigateToWholesale,
   onDeleteSale,
@@ -57,7 +54,7 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
             Counter Sales Dashboard
           </span>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">
-            Today's Performance
+            Today&apos;s Performance
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -177,7 +174,7 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
             <div className="flex items-center gap-2">
               <PackageCheck className="w-4 h-4 text-sky-600" />
               <h2 className="font-bold text-slate-800 text-xs sm:text-sm">
-                Today's Product Breakdown
+                Today&apos;s Product Breakdown
               </h2>
             </div>
             <span className="text-[11px] text-slate-500">
@@ -340,7 +337,7 @@ export const TodaySalesView: React.FC<TodaySalesViewProps> = ({
               Remove Sale Entry?
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 mt-1">
-              Delete <strong className="text-slate-900">{saleToDelete.quantity} × {saleToDelete.productName} (₹{saleToDelete.lineTotal})</strong>? Today's totals and graphs will update immediately.
+              Delete <strong className="text-slate-900">{saleToDelete.quantity} × {saleToDelete.productName} (₹{saleToDelete.lineTotal})</strong>? Today&apos;s totals and graphs will update immediately.
             </p>
             <div className="mt-5 flex gap-2.5">
               <button

@@ -10,7 +10,7 @@ import {
   Legend
 } from 'recharts';
 import { DailySummary } from '@/lib/types';
-import { IndianRupee, Calendar, ShoppingBag, Truck, Store, X } from 'lucide-react';
+import { IndianRupee, Calendar, Truck, Store, X } from 'lucide-react';
 
 interface DailyChartViewProps {
   recentDays: DailySummary[];
@@ -139,9 +139,10 @@ export const DailyChartView: React.FC<DailyChartViewProps> = ({ recentDays }) =>
             <BarChart
               data={chartData}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-              onClick={(e: any) => {
-                if (e && e.activePayload && e.activePayload.length) {
-                  setSelectedDay(e.activePayload[0].payload.raw);
+              onClick={(e) => {
+                const eventData = e as unknown as { activePayload?: { payload: { raw: DailySummary } }[] };
+                if (eventData && eventData.activePayload && eventData.activePayload.length) {
+                  setSelectedDay(eventData.activePayload[0].payload.raw);
                 }
               }}
             >
@@ -154,7 +155,7 @@ export const DailyChartView: React.FC<DailyChartViewProps> = ({ recentDays }) =>
                 tickFormatter={(val) => `₹${val}`}
               />
               <Tooltip
-                formatter={(val: any, name: any) => [
+                formatter={(val: string | number | readonly (string | number)[] | undefined, name: string | number | undefined) => [
                   `₹${Number(val).toLocaleString('en-IN')}`,
                   name === 'retailRevenue' ? 'Retail Counter' : 'Wholesale Bulk'
                 ]}

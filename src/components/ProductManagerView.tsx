@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { Product } from '@/lib/types';
 import { 
-  Package, 
   Plus, 
   Edit2, 
   Check, 
   X, 
   RotateCcw, 
   IndianRupee,
-  ToggleLeft,
-  ToggleRight,
   Sparkles,
   Boxes,
-  Truck
+  Truck,
+  Bot,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 interface ProductManagerViewProps {
@@ -31,6 +31,11 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // Groq AI Assistant states
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiMessage, setAiMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   // Form states for new product
   const [newName, setNewName] = useState('');
   const [newTamilName, setNewTamilName] = useState('');
@@ -47,6 +52,88 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
   const [editCrateSize, setEditCrateSize] = useState<number>(20);
   const [editUnit, setEditUnit] = useState('');
   const [editCategory, setEditCategory] = useState<Product['category']>('Milk');
+
+  // Handle Groq AI Natural Language Update
+  const handleAiSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!aiPrompt.trim() || isAiLoading) return;
+
+    setIsAiLoading(true);
+    setAiMessage(null);
+
+    try {
+      const res = await fetch('/api/ai-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: aiPrompt.trim(),
+          products,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to process request with Groq AI');
+      }
+
+      let appliedUpdates = 0;
+      let appliedAdditions = 0;
+
+      if (data.updates && Array.isArray(data.updates) && data.updates.length > 0) {
+        for (const update of data.updates) {
+          if (update.id) {
+            const changes = update.changes || { ...update };
+            delete changes.id;
+            if (Object.keys(changes).length > 0) {
+              onUpdateProduct(update.id, changes);
+              appliedUpdates++;
+            }
+          }
+        }
+      }
+
+      if (data.additions && Array.isArray(data.additions) && data.additions.length > 0) {
+        for (const add of data.additions) {
+          if (add.name && add.price) {
+            onAddProduct({
+              name: String(add.name).trim(),
+              tamilName: add.tamilName ? String(add.tamilName).trim() : undefined,
+              category: add.category || 'Curd & Dairy',
+              unit: add.unit ? String(add.unit).trim() : '1 unit',
+              price: Number(add.price),
+              wholesalePrice: add.wholesalePrice ? Number(add.wholesalePrice) : Number(add.price),
+              wholesaleCrateSize: add.wholesaleCrateSize ? Number(add.wholesaleCrateSize) : 20,
+              isActive: add.isActive !== undefined ? Boolean(add.isActive) : true,
+              sortOrder: products.length + appliedAdditions + 1,
+            });
+            appliedAdditions++;
+          }
+        }
+      }
+
+      if (appliedUpdates > 0 || appliedAdditions > 0) {
+        const parts: string[] = [];
+        if (appliedUpdates > 0) parts.push(`updated ${appliedUpdates} product(s)`);
+        if (appliedAdditions > 0) parts.push(`added ${appliedAdditions} new product(s)`);
+
+        setAiMessage({
+          type: 'success',
+          text: data.explanation || `Successfully ${parts.join(' and ')}!`,
+        });
+        setAiPrompt('');
+      } else {
+        setAiMessage({
+          type: 'error',
+          text: data.explanation || 'Could not find any products to update or add.',
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setAiMessage({ type: 'error', text: `Groq AI error: ${msg}` });
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const startEdit = (p: Product) => {
     setEditingId(p.id);
@@ -134,6 +221,109 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
         </div>
       </div>
 
+      {/* Groq AI Product Assistant Bar */}
+      <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-4 sm:p-5 rounded-2xl border border-purple-500/30 shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />
+        
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-8 h-8 rounded-lg bg-purple-500/30 flex items-center justify-center border border-purple-400/40 text-purple-300">
+            <Bot className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                Groq AI Product Assistant
+                <span className="text-[10px] font-semibold tracking-wide bg-purple-500/40 text-purple-200 px-2 py-0.5 rounded-full border border-purple-400/30">
+                  Groq Cloud AI
+                </span>
+              </h3>
+            </div>
+            <p className="text-xs text-purple-200/80">
+              Ask in plain English or Tamil-English to update prices, wholesale rates, or add brand new products instantly.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleAiSubmit} className="mt-3 flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder='e.g., "Add Butter Milk 200ml for 15 rs", "Change Double Toned Milk price to 45"'
+              disabled={isAiLoading}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-purple-400/40 text-xs sm:text-sm text-white placeholder:text-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isAiLoading || !aiPrompt.trim()}
+            className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-bold shadow-md shadow-purple-900/40 flex items-center justify-center gap-2 transition"
+          >
+            {isAiLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Updating...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>Apply with AI</span>
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Quick Suggestion Chips */}
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] text-purple-200/70">
+          <span className="font-semibold text-purple-300">Quick prompts:</span>
+          {[
+            'Change Double Toned Milk 500 ML price to ₹44',
+            'FCM 500 ML wholesale to ₹70',
+            'Set Curd T.M. Cup price to ₹15',
+          ].map((promptText) => (
+            <button
+              key={promptText}
+              type="button"
+              onClick={() => {
+                setAiPrompt(promptText);
+              }}
+              className="px-2 py-0.5 rounded-md bg-purple-800/40 hover:bg-purple-700/60 text-purple-200 border border-purple-400/20 transition text-[10px]"
+            >
+              &quot;{promptText}&quot;
+            </button>
+          ))}
+        </div>
+
+        {/* Response Alert */}
+        {aiMessage && (
+          <div
+            className={`mt-3 p-3 rounded-xl border text-xs sm:text-sm flex items-start gap-2 animate-in fade-in ${
+              aiMessage.type === 'success'
+                ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-200'
+                : 'bg-rose-950/70 border-rose-500/50 text-rose-200'
+            }`}
+          >
+            {aiMessage.type === 'success' ? (
+              <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            )}
+            <div className="flex-1">
+              <span>{aiMessage.text}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAiMessage(null)}
+              className="text-slate-400 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Add Product Form Modal */}
       {isAdding && (
         <form
@@ -183,7 +373,7 @@ export const ProductManagerView: React.FC<ProductManagerViewProps> = ({
               <label className="block text-xs font-semibold text-slate-600 mb-1">Category *</label>
               <select
                 value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value as any)}
+                onChange={(e) => setNewCategory(e.target.value as Product['category'])}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
                 <option value="Milk">Milk</option>

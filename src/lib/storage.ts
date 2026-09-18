@@ -1,7 +1,7 @@
 import { Product, SaleEntry, DailySummary, MonthlySummary, ShopProfile, SaleType } from './types';
 import { INITIAL_PRODUCTS, DEFAULT_SHOP_PROFILE } from './seed';
 
-const PRODUCTS_KEY = 'shopcalci_products_v1';
+const PRODUCTS_KEY = 'shopcalci_products_v2';
 const SALES_KEY = 'shopcalci_sales_v1';
 const PROFILE_KEY = 'shopcalci_profile_v1';
 

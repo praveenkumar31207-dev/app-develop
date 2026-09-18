@@ -48,7 +48,6 @@ export const AddSaleView: React.FC<AddSaleViewProps> = ({
   products,
   onRecordSale,
   onRecordMultipleSales,
-  onNavigateToToday: _onNavigateToToday,
 }) => {
   // Multi-product Cart State
   const [cart, setCart] = useState<CartItem[]>([]);

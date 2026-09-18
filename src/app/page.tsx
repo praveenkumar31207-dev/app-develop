@@ -73,6 +73,7 @@ export default function Home() {
 
   // Initialize on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsClient(true);
     setIsOnline(navigator.onLine);
     reloadData();
