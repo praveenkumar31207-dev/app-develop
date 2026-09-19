@@ -28,14 +28,22 @@ A lightweight, mobile-first, offline-ready web application designed for retail d
    npm install
    ```
 
-2. Configure environment variables in `.env.local`:
+2. Configure environment variables in `.env.local` (see `.env.example`):
    ```env
    NEXT_PUBLIC_SUPABASE_URL=https://ibgckqkoxmamddaixwud.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   # Groq Cloud AI API Key for Natural Language Product Assistant
+   # Get a free API key at: https://console.groq.com/keys
+   GROQ_API_KEY=gsk_your_groq_api_key
    ```
+
+   > **Note on Groq AI Assistant**:
+   > The "AI Assistant" in Product Management uses Groq (`openai/gpt-oss-120b`) to update catalogue prices or add products via natural language prompts (e.g. *"FCM 500 ML wholesale to ₹70"*).
+   > If deploying on Vercel, Render, or Netlify, ensure `GROQ_API_KEY` is added to your project's Environment Variables settings.
 
 3. Run the development server:
    ```bash
    npm run dev
    ```
    Open [http://localhost:3000](http://localhost:3000) to view the counter dashboard.
+
